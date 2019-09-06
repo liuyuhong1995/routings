@@ -88,7 +88,7 @@ bool firstDrainFlag=true;
 uint32_t firstDrainedNodeId=0;
 double firstDrainedNodeTime=0;
 
-string thisSimPath = "/home/zlb/sim_temp/aodv";
+string thisSimPath = "/home/wsn/sim_temp/aodv";
 string exeName = "aodv";
 // stringstream ssi;
 
@@ -290,9 +290,9 @@ void createSocketCallBack(){
 //生成XML文件
 void createXML(){
 	if(isEntity){
-		Panim = new AnimationInterface("/home/zlb/sim_temp/AODV/output.xml");
+		Panim = new AnimationInterface("/home/wsn/sim_temp/AODV/output.xml");
 	}else{
-		Panim = new AnimationInterface("/home/zlb/sim_temp/GROUPAODV/"+mobilityModel+"/output.xml");
+		Panim = new AnimationInterface("/home/wsn/sim_temp/GROUPAODV/"+mobilityModel+"/output.xml");
 	}
 	
 	Panim->UpdateNodeColor(mobileSinkNode.Get(0), 0, 255, 0);//接收器颜色设置成绿色。
@@ -312,15 +312,15 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isEntity){
-			ss << "/home/zlb/sim_temp/AODV/"<<mobilityModel<<"/LIFE/"<<initialJ<<"-entity.record";
+			ss << "/home/wsn/sim_temp/AODV/"<<mobilityModel<<"/LIFE/"<<initialJ<<"-entity.record";
 		}else{
-			ss << "/home/zlb/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
 		}
 	}else{
 		// if(isEntity){
-			ss << "/home/zlb/sim_temp/AODV/"<<mobilityModel<<"/"<<maxPackets<<"-entity.record";
+			ss << "/home/wsn/sim_temp/AODV/"<<mobilityModel<<"/"<<maxPackets<<"-entity.record";
 		// }else{
-		// 	ss << "/home/zlb/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
+		// 	ss << "/home/wsn/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
 		// }
 	}
 	
