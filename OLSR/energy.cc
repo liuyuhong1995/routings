@@ -1,0 +1,304 @@
+#include "energy.h"
+#include <string>
+#include <iomanip>
+#include "ns3/mobility-module.h"
+#include "tool.h"
+// #include "jump-count-table-chain.h"
+
+using namespace std;
+using namespace ns3;
+
+extern clock_t lifeTime;
+// extern uint32_t size;
+extern string thisSimPath;//simulation path
+extern string exeName;
+//声明外部变量
+extern double totalConsumed;
+extern double initialJ;
+extern double TxPara;//0.000006J/Bytes for Tx
+extern double RxPara;//0.000006J/Bytes for Rx
+extern bool firstDrainFlag;
+extern uint32_t firstDrainedNodeId;
+extern double firstDrainedNodeTime;
+// extern uint32_t nDrain;
+extern double remaingJ[MAX_NUM];
+//extern bool flag;
+extern uint32_t pktSize;
+extern uint32_t maxPackets;
+extern bool Banim;
+// extern uint32_t firstDrainedSinkId;
+extern AnimationInterface *Panim;
+// extern double simStopTime;
+
+
+
+
+// extern InetSocketAddress broadcastAdr;
+// extern TypeId tid;
+
+// extern JumpCountTableChain jctChain;
+
+namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE("Energy");
+/*
+ * 测试手动将某个节点的能量设置为最低量
+ */
+void ManualDrainTest(uint32_t index){
+	remaingJ[index]=pktSize*2*TxPara;
+}
+/*
+ * 用于处理当senseNode收到drainNotice_Type的pkt
+ */
+// int32_t ProcessDrainNoticePacket(Ptr<Node> thisNode,
+// 		Ptr<Packet> packet, Ipv4Header h){
+// 	Ipv4Address targetAdr = h.GetSource();
+// 	Ipv4Address thisAdr = GetNodeIpv4Address(thisNode);
+// 	NS_LOG_LOGIC(std::endl<<TIME_STAMP_FUC<<thisAdr<<" received a drainNotice_Type pkt from "
+// 			<<targetAdr);
+
+// 	TableNode *thisTn = jctChain.InquireNode(GetNodeIpv4Address(thisNode));
+// 	NS_ASSERT(thisTn!=NULL);
+
+// 	uint32_t nDstSinks = thisTn->jcTable->GetSinkNum();
+// 	RoutingNode *currentRn=thisTn->jcTable->GetHead();
+// 	NS_ASSERT(currentRn!=NULL);
+
+// 	for (uint32_t i = 0; i < nDstSinks; i++) {
+// 		currentRn->gt->DeleteNode(targetAdr);
+// 		currentRn = currentRn->next;
+// 	}
+// 	return 0;
+// }
+
+
+// void BroadcastDrainNotice(Ptr<Node> node){
+// 	NS_LOG_LOGIC(TIME_STAMP_FUC<<"BroadcastDrainNotice from "
+// 			<<GetNodeIpv4Address(node));
+// 	Ipv4Header h;
+// 	h.SetIdentification(drainNotice_Type);
+// 	h.SetSource(GetNodeIpv4Address(node));
+// 	Ptr<Packet> drainNoticePkt = Create<Packet>(0);
+// 	drainNoticePkt->AddHeader(h);
+// 	Ptr<Socket> drainNoticeSocket = Socket::CreateSocket(
+// 			node, tid);
+// 	drainNoticeSocket->Connect(broadcastAdr);
+// 	drainNoticeSocket->SetAllowBroadcast(true);
+// 	drainNoticeSocket->Send(drainNoticePkt);
+// 	drainNoticeSocket->Close();
+// }
+
+void InstallEnergy(NodeContainer senseNodes){
+	for (uint32_t i = 0; i < MAX_NUM; i++) {
+		remaingJ[i] = -1.0;
+	}
+	for (uint32_t i = 0; i < senseNodes.GetN(); i++) {
+		cout<<"进入InstallEnergy函数,当前节点id是："<<senseNodes.Get(i)->GetId()<<endl;
+		remaingJ[senseNodes.Get(i)->GetId()] = initialJ;
+	}
+	remaingJ[senseNodes.GetN()] = initialJ+10;//接收器能量
+}
+/*
+ * Record the final remaining energy of each senseNodes(including sinkNodes)
+ */
+void EnergyFinalRecord(NodeContainer senseNodes,double remaingJ[]){
+		std::stringstream ss;
+		std::stringstream si;
+		ss << thisSimPath<<maxPackets<<"-final-enegy.record";
+		std::ofstream of(ss.str().c_str());
+		ss << std::endl << "Initial energy = " << initialJ << std::endl;
+		ss << std::setw(15) << std::left << "Node Number";
+		ss << std::setw(15) << std::left << "Remaining" << std::endl;
+		ss << std::setw(15) << std::left << "(global)";
+		ss << std::setw(25) << std::left << "Energy" << std::endl;
+
+		uint32_t nNodes = senseNodes.GetN();
+		for (uint32_t i = 0; i < nNodes; i++) {
+			si << std::setw(15) << std::left << senseNodes.Get(i)->GetId();
+			si << std::setw(15) << std::left
+					<< remaingJ[senseNodes.Get(i)->GetId()] << std::endl;
+			ss << si.str();
+			si.str("");
+			si.clear();
+		}
+		ss << "Total comsumed energy = " << totalConsumed;
+		cout<<"Total comsumed energy = "<<totalConsumed<<endl;
+		NS_LOG_INFO(ss.str().c_str());
+		of << ss.str().c_str();
+		of.close();
+}
+
+
+bool CheckRemainingJ(Ptr<Node> n, Ptr<Packet> pkt) {
+	uint32_t id = n->GetId();
+	return remaingJ[id] >= pkt->GetSize() * TxPara;
+}
+
+bool CheckRemainingJ(Ptr<Node> n) {
+	uint32_t id = n->GetId();
+	return remaingJ[id] >= pktSize * TxPara;
+}
+
+
+/*
+ * Change nodes color by energy level
+ */
+void UpdateNodesColorByEnergy(Ptr<Node> n, double per, nodeType nT){
+	if (per < 1 && per >= 0.9) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 200, 0);
+		} else {
+			Panim->UpdateNodeColor(n, 200, 0, 0);
+		}
+	} else if (per < 0.9 && per >= 0.5) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 150, 0);
+		} else {
+			Panim->UpdateNodeColor(n, 150, 0, 0);
+		}
+	} else if (per < 0.5 && per >= 0.25) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 100, 0);
+		} else {
+			Panim->UpdateNodeColor(n, 100, 0, 0);
+		}
+	} else {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 50, 0);
+		} else {
+			Panim->UpdateNodeColor(n, 50, 0, 0);
+		}
+	}
+}
+
+
+void UpdateEnergySources(Ptr<Node> n, Ptr<Packet> p, uint16_t flag,NodeContainer mobileSinkNode) {
+	uint32_t id = n->GetId();
+	nodeType thisNt = isSinkType(n,mobileSinkNode.Get(0));
+	uint32_t thisPktSize = p->GetSize();
+	double oldValue = remaingJ[id];
+	double newValue = oldValue;
+	double consumedJ;
+	NS_ASSERT(oldValue > 0);
+	switch (flag) {
+	case 0: {//Tx
+		thisPktSize=p->GetSize();
+		consumedJ=thisPktSize * TxPara;
+		newValue = newValue - consumedJ;
+
+		if (newValue <= pktSize * TxPara) {//小于发送一个数据包的能量
+			NS_LOG_DEBUG(
+					TIME_STAMP_FUC<<"Node["<<id<<"]'s energy used up on transmission");
+			if (Banim) {
+				Panim->UpdateNodeColor(n, 0, 0, 0);
+			}
+			remaingJ[id] = 0;
+			totalConsumed+=oldValue;
+			if (firstDrainFlag) {//需要后期考量，是否应该停止仿真
+				firstDrainedNodeId = id;
+				firstDrainedNodeTime = Simulator::Now().GetSeconds();
+				firstDrainFlag=false;
+
+
+				NS_LOG_DEBUG(
+					TIME_STAMP_FUC<<"停止仿真！！");
+				DoDrainRecord(n);
+
+				lifeTime=Simulator::Now().GetSeconds();
+				Simulator::Stop();
+				return;
+			}
+			
+		} else {//更新剩余节点能量和颜色
+			remaingJ[id] = newValue;
+			totalConsumed+=consumedJ;
+			if (Banim) {
+				double remainingPer = remaingJ[id] / initialJ;
+				UpdateNodesColorByEnergy(n, remainingPer, thisNt);
+			}
+		}
+		break;
+	}
+	case 1: {//Rx
+		consumedJ=thisPktSize * RxPara;
+		newValue = newValue - consumedJ;
+
+		if (newValue <= pktSize * RxPara) {
+			NS_LOG_DEBUG(
+					TIME_STAMP_FUC<<"Node["<<id<<"]'s energy used up on reception");
+			if (Banim) {
+				Panim->UpdateNodeColor(n, 0, 0, 0);
+			}
+			remaingJ[id] = 0;
+			totalConsumed+=oldValue;
+			if (firstDrainFlag) {
+				firstDrainedNodeId = id;
+				firstDrainedNodeTime = Simulator::Now().GetSeconds();
+				firstDrainFlag=false;
+
+
+				DoDrainRecord(n);
+
+				lifeTime=Simulator::Now().GetSeconds();
+				Simulator::Stop();
+			}
+		} else {
+			remaingJ[id] = newValue;
+			totalConsumed+=consumedJ;
+			if (Banim) {
+				double remainingPer = remaingJ[id] / initialJ;
+				UpdateNodesColorByEnergy(n, remainingPer, thisNt);
+			}
+		}
+		break;
+	}
+	default: {
+		break;
+	}
+	}
+}
+
+
+void DoDrainRecord(Ptr<Node> thisNode){
+	stringstream ss,si;
+	ss << thisSimPath << exeName << "-drain.record";
+	ofstream of;
+	of.open(ss.str().c_str(), ios::app);
+	ss.str("");
+	ss.clear();
+
+	double timeNow=Simulator::Now().GetSeconds();
+	// Ptr<RandomWaypointMobilityModel> cpmm = thisNode->GetObject<
+	// 					RandomWaypointMobilityModel>();
+	// Vector thisLocation = cpmm->GetPosition();	//获取当前节点的坐标
+	Ipv4Address thisAdr=GetNodeIpv4Address(thisNode);
+	si<<thisAdr;
+	uint32_t thisId=thisNode->GetId();
+
+	ss<<setw(10)<<left<<timeNow;
+
+	ss<<setw(15)<<left<<si.str();
+	si.str("");
+	si.clear();
+
+	ss<<setw(5)<<left<<thisId;
+
+	// si<<thisLocation.x;
+	// si<<":";
+	// si<<thisLocation.y;
+	// ss<<si.str();
+	si.str("");
+	si.clear();
+
+	ss<<endl;
+
+	of<<ss.str().c_str();
+	ss.str("");
+	ss.clear();
+}
+
+
+
+}//namespace ns3
+
+
