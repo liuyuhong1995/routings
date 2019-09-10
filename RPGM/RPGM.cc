@@ -29,7 +29,7 @@ int main(int argc, char **argv)
   mobility.Install(relay);
   relay.Get(0)->GetObject<ConstantPositionMobilityModel>()->SetPosition(Vector(100, 100, 0));
 
-  AnimationInterface anim ("/home/zlb/sim_temp/RPGM/output.xml");
+  AnimationInterface anim ("/home/wsn/sim_temp/RPGM/output.xml");
     
   Simulator::Stop (Seconds(totalTime));
   Simulator::Run ();

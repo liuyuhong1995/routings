@@ -82,7 +82,7 @@ void InstallEnergy(NodeContainer senseNodes){
 void EnergyFinalRecord(NodeContainer senseNodes,double remaingJ[]){
 		std::stringstream ss;
 		std::stringstream si;
-		ss << "/home/zlb/sim_temp/LBR/"<<maxPackets<<"-final-enegy.record";
+		ss << "/home/wsn/sim_temp/LBR/"<<maxPackets<<"-final-enegy.record";
 		std::ofstream of(ss.str().c_str());
 		// ss << std::endl << "Initial energy = " << initialJ << std::endl;
 		// ss << std::endl << "网络生命周期:" << (double)simFinishRealTime/1000000 << "(s)"<< std::endl;

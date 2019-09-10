@@ -139,7 +139,7 @@ uint32_t firstDrainedSinkId=0;
 double firstDrainedNodeTime=0;
 string thisSimPath;//simulation path
 string exeName="GROUPROCOMARMain";
-string simFolderName="/home/zlb/sim_temp/";
+string simFolderName="/home/wsn/sim_temp/";
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
 double networkLifetime;
@@ -831,12 +831,12 @@ void createXml(){
 	/**Set anim**/
 	if (Banim) {
 		if(isEntity){
-			Panim = new AnimationInterface("/home/zlb/sim_temp/ROCOMAR/RWP/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/ROCOMAR/RWP/output.xml");
 		}else{
 			if(isRelay){
-				Panim = new AnimationInterface("/home/zlb/sim_temp/ROCOMAR/RELAY/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/ROCOMAR/RELAY/output.xml");
 			}else{
-				Panim = new AnimationInterface("/home/zlb/sim_temp/ROCOMAR/"+mobilityModel+"/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/ROCOMAR/"+mobilityModel+"/output.xml");
 			}
 			
 		}
@@ -881,22 +881,22 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isEntity){
-			ss << "/home/zlb/sim_temp/ROCOMAR/RWP/"<<initialJ<<"-entity.record";
+			ss << "/home/wsn/sim_temp/ROCOMAR/RWP/"<<initialJ<<"-entity.record";
 		}else{
 			if(isRelay){
-				ss << "/home/zlb/sim_temp/ROCOMAR/RELAY/LIFE/"<<initialJ<<"-J-"<<nRelayNodes<<"-LIFE-RELAYs-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/ROCOMAR/RELAY/LIFE/"<<initialJ<<"-J-"<<nRelayNodes<<"-LIFE-RELAYs-"+mobilityModel+".record";
 			}else{
-				ss << "/home/zlb/sim_temp/ROCOMAR/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/ROCOMAR/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
 			}
 		}
 	}else{
 		if(isEntity){
-			ss << "/home/zlb/sim_temp/ROCOMAR/RWP/"<<maxPackets<<"-entity.record";
+			ss << "/home/wsn/sim_temp/ROCOMAR/RWP/"<<maxPackets<<"-entity.record";
 		}else{
 			if(isRelay){
-				ss << "/home/zlb/sim_temp/ROCOMAR/RELAY/"<<nRelayNodes<<"-RELAY-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/ROCOMAR/RELAY/"<<nRelayNodes<<"-RELAY-"+mobilityModel+".record";
 			}else{
-				ss << "/home/zlb/sim_temp/ROCOMAR/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/ROCOMAR/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
 			}
 		}
 	}

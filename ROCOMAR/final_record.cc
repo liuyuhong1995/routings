@@ -75,9 +75,9 @@ void recordfile(){
 	stringstream si;
 	ofstream of;
 	if (rewrite) {
-		of.open("/home/zlb/workspace/ns3/result-pp2.record");
+		of.open("/home/wsn/workspace/ns3/result-pp2.record");
 	} else {
-		of.open("/home/zlb/workspace/ns3/result-pp2.record", ios::app);
+		of.open("/home/wsn/workspace/ns3/result-pp2.record", ios::app);
 	}
 
 	NS_LOG_UNCOND("");
@@ -117,7 +117,7 @@ void recordfile(){
 
 }
 void gnuplot (){
-	string simFolderName="/home/zlb/sim_temp/";
+	string simFolderName="/home/wsn/sim_temp/";
 	stringstream si;
 	ofstream of;
 	si<<thisSimPath<<exeName<<"-dynamic-DGP.gnu";

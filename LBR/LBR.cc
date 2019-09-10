@@ -134,7 +134,7 @@ uint32_t firstDrainedSinkId=0;
 double firstDrainedNodeTime=0;
 string thisSimPath;//simulation path
 string exeName="LBRMain";
-string simFolderName="/home/zlb/sim_temp/";
+string simFolderName="/home/wsn/sim_temp/";
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
 double networkLifetime;
@@ -717,9 +717,9 @@ void createXml(){
 	/**Set anim**/
 	if (Banim) {
 		// if(isEntity){
-		// 	Panim = new AnimationInterface("/home/zlb/sim_temp/LBR/RWP/output.xml");
+		// 	Panim = new AnimationInterface("/home/wsn/sim_temp/LBR/RWP/output.xml");
 		// }else{
-			Panim = new AnimationInterface("/home/zlb/sim_temp/LBR/"+mobilityModel+"/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/LBR/"+mobilityModel+"/output.xml");
 		// }
 		ssi.str("");
 		ssi.clear();
@@ -746,15 +746,15 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isEntity){
-			ss << "/home/zlb/sim_temp/LBR/"<<mobilityModel<<"/"<<"LIFE"<<"/"<<initialJ<<"-entity.record";//RWP/
+			ss << "/home/wsn/sim_temp/LBR/"<<mobilityModel<<"/"<<"LIFE"<<"/"<<initialJ<<"-entity.record";//RWP/
 		}else{
-			ss << "/home/zlb/sim_temp/LBR/"<<mobilityModel<<"/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/LBR/"<<mobilityModel<<"/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
 		}
 	}else{
 		if(isEntity){
-			ss << "/home/zlb/sim_temp/LBR/"<<mobilityModel<<"/"<<maxPackets<<"-entity.record";
+			ss << "/home/wsn/sim_temp/LBR/"<<mobilityModel<<"/"<<maxPackets<<"-entity.record";
 		}else{
-			ss << "/home/zlb/sim_temp/LBR/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/LBR/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
 		}
 	}
 	

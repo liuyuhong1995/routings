@@ -99,7 +99,7 @@ double firstDrainedNodeTime=0;
 bool isStatic  = false;
 
 //仿真文件
-string thisSimPath = "/home/zlb/sim_temp/OLSR/";
+string thisSimPath = "/home/wsn/sim_temp/OLSR/";
 string exeName = "OLSR";
 
 
@@ -308,15 +308,15 @@ void DataToSink(){
 void createXML(){
 	if(isSpeed){
 		if(isLifeCycle){
-			Panim = new AnimationInterface("/home/zlb/sim_temp/OLSR/"+mobilityModel+"/SPEED/LIFE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/SPEED/LIFE/output.xml");
 		}else{
-			Panim = new AnimationInterface("/home/zlb/sim_temp/OLSR/"+mobilityModel+"/SPEED/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/SPEED/output.xml");
 		}
 	}else{
 		if(isLifeCycle){
-			Panim = new AnimationInterface("/home/zlb/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
 		}else{
-			Panim = new AnimationInterface("/home/zlb/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/output.xml");
 		}
 	}
 	
@@ -338,15 +338,15 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isSpeed){
-			ss << "/home/zlb/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/LIFE/"<<moveSpeed<<".record";
+			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/LIFE/"<<moveSpeed<<".record";
 		}else{
-			ss << "/home/zlb/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
 		}
 	}else{
 		if(isSpeed){
-			ss << "/home/zlb/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/"<<moveSpeed<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/"<<moveSpeed<<"-"+mobilityModel+".record";
 		}else{
-			ss << "/home/zlb/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<maxPackets<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<maxPackets<<"-"+mobilityModel+".record";
 		}
 	}
 	
