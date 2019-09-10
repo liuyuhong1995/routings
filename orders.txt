@@ -1,0 +1,78 @@
+AODV:
+群体测试:
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/AODV/AODV --initialJ=30 --size=21 --maxDis=225 --isLifeCycle=false --isEntity=false --mobilityModel=RPGM --maxPackets=300"
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/AODV/AODV --size=21 --maxDis=225 --isLifeCycle=true --isEntity=false --mobilityModel=RPGM --maxPackets=400000 --initialJ=1"
+
+实体测试:去掉将--isEntity设置为true
+
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/AODV/AODV --initialJ=30 --size=21 --maxDis=225 --isLifeCycle=false --isEntity=true --mobilityModel=RDM --maxPackets=300"
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/AODV/AODV --size=21 --maxDis=225 --isLifeCycle=true --isEntity=true --mobilityModel=RWP --maxPackets=400000 --initialJ=1"
+
+OLSR:
+群体测试:
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/OLSR/OLSR --initialJ=30 --size=21 --maxDis=225 --isLifeCycle=false --mobilityModel=RPGM --maxPackets=300"
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/OLSR/OLSR --size=21 --maxDis=225 --isLifeCycle=true --mobilityModel=RPGM --maxPackets=400000 --initialJ=1"
+
+速度为自变量:
+
+以速度为自变量,发送3000数据包,测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/OLSR/OLSR --size=21 --initialJ=200 --isStatic=false --maxDis=225 --pktSize=1500 --mobilityModel=RPGM --isLifeCycle=false --maxPackets=300 --isSpeed=true --moveSpeed=5"
+
+以速度为自变量,初始能量5J,发包最大,测试不同速度下的网络生存周期:
+sudo ./waf --run "scratch/OLSR/OLSR --size=20 --isStatic=false --maxDis=225 --pktSize=1500 --mobilityModel=RPGM --isLifeCycle=true --maxPackets=3000000 --initialJ=1 --isSpeed=true --moveSpeed=5"
+
+
+LBR:
+LBR:
+
+群体测试:
+
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/LBR/LBR --nNodes=20 --initialJ=200 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --isEntity=false --mobilityModel=NOMADIC isLifeTime=false --maxPackets=500"
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/LBR/LBR --nNodes=20 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --maxPackets=100000 --isEntity=false --mobilityModel=RPGM --isLifeCycle=true  --initialJ=1"
+
+实体测试:
+
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/LBR/LBR --nNodes=20 --initialJ=200 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --isEntity=true --mobilityModel=RWP isLifeTime=false --maxPackets=2000"
+
+以initialJ为自变量测试网络生命周期:,将--isEntity设置为true
+sudo ./waf --run "scratch/LBR/LBR --nNodes=20 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --maxPackets=100000 --isEntity=true --mobilityModel=RDM --isLifeCycle=true  --initialJ=1"
+
+ROCOMAR:
+
+群体测试:
+以maxPackets为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/ROCOMAR/ROCOMAR --nNodes=20 --initialJ=200 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --nRelayNodes=5 --pktSize=1500 --isEntity=false --mobilityModel=NOMADIC --isLifeCycle=false --maxPackets=1000"
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/ROCOMAR/ROCOMAR --nNodes=20 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --nRelayNodes=5 --pktSize=1500 --isEntity=false --mobilityModel=NOMADIC --isLifeCycle=true --maxPackets=1000000 --initialJ=1"
+
+
+实体测试:将--isEntity设置为true
+
+以maxPackets为自变量测试时延\吞吐量\PDR:
+
+以initialJ为自变量测试网络生命周期:
+sudo ./waf --run "scratch/ROCOMAR/ROCOMAR --nNodes=20 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --nRelayNodes=5 --pktSize=1500 --isEntity=true --mobilityModel=RPGM --isLifeCycle=true --maxPackets=1000000 --initialJ=0.2"
+
+中继数目测试:
+
+中继数目为自变量测试时延\吞吐量\PDR:
+sudo ./waf --run "scratch/ROCOMAR/ROCOMAR --nNodes=20 --initialJ=200 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --isEntity=false --mobilityModel=RPGM --maxPackets=3000 --isRelay=true --nRelayNodes=1"
+
+
+中继数目为自变量测试生存周期:
+sudo ./waf --run "scratch/ROCOMAR/ROCOMAR --nNodes=20 --gridTest=true --Banim=true --isStatic=false --maxDis=225 --pktSize=1500 --isEntity=false --mobilityModel=RPGM --maxPackets=3000000 --isRelay=true --isLifeCycle=true --nRelayNodes=5 --initialJ=3"
+
