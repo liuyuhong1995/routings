@@ -680,7 +680,7 @@ void createNode(){
 	// ns2.Install ();
 
 	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/rocomar_speed5.ns_movements";
+		std::string traceFile = "scratch/"+mobilityModel+"/rocomar_speed10.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 	}
