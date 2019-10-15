@@ -163,6 +163,7 @@ void createNode(){
 	NS_LOG_DEBUG("Create nodes done!");
 }
 
+
 void createMobilityModel(){
 	MobilityHelper mobility;
 	mobility.SetPositionAllocator("ns3::GridPositionAllocator",
