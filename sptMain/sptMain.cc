@@ -12,7 +12,6 @@
 #include "sink-record.h"
 #include "sense-sink-match-table.h"
 #include "log-helper.h"
-#include "rectangle-amend.h"
 #include "math.h"
 #include "time.h"
 #include "stdlib.h"    //标准库头文件
