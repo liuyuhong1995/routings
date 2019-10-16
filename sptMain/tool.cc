@@ -81,8 +81,7 @@ void FindInrangeNodes(NodeContainer allNodes) {   //从0开始寻找与每个节
 /**
  * 注意：这里传递的泛型参数
  */
- inline double GetDistanceOf2Nodes(Ptr<Node> srcN, Ptr<Node> remN)
- {
+inline double GetDistanceOf2Nodes(Ptr<Node> srcN, Ptr<Node> remN) {
 	Ptr<ConstantPositionMobilityModel> srcCpmm = srcN->GetObject<
 			ConstantPositionMobilityModel>();
 	Ptr<ConstantPositionMobilityModel> remCpmm = remN->GetObject<

@@ -15,8 +15,6 @@ extern double totalConsumed;
 extern double initialJ;
 extern double TxPara;//0.000006J/Bytes for Tx
 extern double RxPara;//0.000006J/Bytes for Rx
-extern double TxPara1;//0.000006J/Bytes for Tx
-extern double RxPara1;//0.000006J/Bytes for Rx
 extern uint32_t nDrain;
 extern bool firstDrainFlag;
 extern uint32_t firstDrainedNodeId;
@@ -30,7 +28,8 @@ extern bool Banim;
 extern uint32_t firstDrainedSinkId;
 extern AnimationInterface *Panim;
 extern double simStopTime;
-extern uint16_t energyMode;
+
+
 extern InetSocketAddress broadcastAdr;
 extern TypeId tid;
 
@@ -70,7 +69,21 @@ int32_t ProcessDrainNoticePacket(Ptr<Node> thisNode,     //说明要把source从
 }
 
 
-
+void BroadcastDrainNotice(Ptr<Node> node){
+	NS_LOG_LOGIC(TIME_STAMP_FUC<<"BroadcastDrainNotice from "
+			<<GetNodeIpv4Address(node));
+	Ipv4Header h;
+	h.SetIdentification(drainNotice_Type);
+	h.SetSource(GetNodeIpv4Address(node));
+	Ptr<Packet> drainNoticePkt = Create<Packet>(0);
+	drainNoticePkt->AddHeader(h);
+	Ptr<Socket> drainNoticeSocket = Socket::CreateSocket(
+			node, tid);
+	drainNoticeSocket->Connect(broadcastAdr);
+	drainNoticeSocket->SetAllowBroadcast(true);
+	drainNoticeSocket->Send(drainNoticePkt);
+	drainNoticeSocket->Close();
+}
 
 void InstallEnergy(NodeContainer senseNodes){
 	for (uint32_t i = 0; i < MAX_NUM; i++) {
@@ -152,23 +165,20 @@ void UpdateNodesColorByEnergy(Ptr<Node> n, double per, nodeType nT){
 	}
 }
 
-void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p, uint16_t flag,NodeContainer sinkNodes,NodeContainer mobileSinkNode) {
-	uint32_t id = thisNode->GetId();
+void UpdateEnergySources(Ptr<Node> n, Ptr<Packet> p, uint16_t flag,NodeContainer sinkNodes,NodeContainer mobileSinkNode) {
+	uint32_t id = n->GetId();
 	uint32_t thisPktSize = p->GetSize();
-	nodeType thisNt = CheckNodeType(thisNode,sinkNodes,mobileSinkNode.Get(0));
+	nodeType thisNt = CheckNodeType(n,sinkNodes,mobileSinkNode.Get(0));
 	double oldValue = remaingJ[id];
 	double newValue = oldValue;
 	double consumedJ;
-	double distance=GetDistanceOf2Nodes(thisNode,anotherNode);  
 	NS_ASSERT(oldValue > 0);
 	switch (flag) {
 	case 0: {//Tx
 		thisPktSize=p->GetSize();
-		if(energyMode==0)
-		consumedJ=thisPktSize*TxPara;
-		else 
-		consumedJ=thisPktSize*TxPara1*distance;  
-		newValue = newValue - consumedJ;   
+		
+		consumedJ=thisPktSize * TxPara;
+		newValue = newValue - consumedJ;
 //		if (id == 18) {
 //			NS_LOG_DEBUG(TIME_STAMP<<
 //					"Node[18] consumed "<<consumedJ<<" for transmission, "<<newValue<<" left");
@@ -177,7 +187,7 @@ void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p
 			NS_LOG_DEBUG(
 					TIME_STAMP_FUC<<"Node["<<id<<"]'s energy used up on transmission");
 			if (Banim) {
-				Panim->UpdateNodeColor(thisNode, 0, 0, 0);
+				Panim->UpdateNodeColor(n, 0, 0, 0);
 			}
 			remaingJ[id] = 0;
 			totalConsumed+=oldValue;
@@ -191,12 +201,14 @@ void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p
 						TIME_STAMP_FUC<<"Node["<<id<<"] is a sinkNode, stop the simulation");
 				firstDrainedSinkId = id;
 				nDrain++;
-				DoDrainRecord(thisNode);
+				DoDrainRecord(n);
 				simStopTime = Simulator::Now().GetSeconds();
 				Simulator::Stop();    //为什么如果干涸的是汇聚节点就要停止仿真？(汇聚节点干涸说明无法传送信息到ms节点了)
 			} else {
 				nDrain++;
-				DoDrainRecord(thisNode);
+				DoDrainRecord(n);
+//				if (Bdrain == true && aType == my_gene_Algor)
+//					BroadcastDrainNotice(n);
 			}
 		} else {
 			remaingJ[id] = newValue;
@@ -204,17 +216,14 @@ void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p
 
 			if (Banim) {
 				double remainingPer = remaingJ[id] / initialJ;
-				UpdateNodesColorByEnergy(thisNode, remainingPer, thisNt);
+				UpdateNodesColorByEnergy(n, remainingPer, thisNt);
 			}
 		}
 		break;
 	}
 	case 1: {//Rx
-		if(energyMode==0)
-		consumedJ=thisPktSize*TxPara;
-		else 
-		consumedJ=thisPktSize*TxPara1*distance;   
-		newValue = newValue - consumedJ;    
+		consumedJ=thisPktSize * RxPara;
+		newValue = newValue - consumedJ;
 //		if (id == 18) {
 //			NS_LOG_DEBUG(TIME_STAMP<<
 //					"Node[18] consumed "<<consumedJ<<" for reception, "<<newValue<<" left");
@@ -223,7 +232,7 @@ void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p
 			NS_LOG_DEBUG(
 					TIME_STAMP_FUC<<"Node["<<id<<"]'s energy used up on reception");
 			if (Banim) {
-				Panim->UpdateNodeColor(thisNode, 0, 0, 0);
+				Panim->UpdateNodeColor(n, 0, 0, 0);
 			}
 			remaingJ[id] = 0;
 			totalConsumed+=oldValue;
@@ -237,19 +246,21 @@ void UpdateEnergySources(Ptr<Node> thisNode, Ptr<Node> anotherNode,Ptr<Packet> p
 								TIME_STAMP_FUC<<"Node["<<id<<"] is a sinkNode, stop the simulation");
 				firstDrainedSinkId = id;
 				nDrain++;
-				DoDrainRecord(thisNode);
+				DoDrainRecord(n);
 				simStopTime = Simulator::Now().GetSeconds();
 				Simulator::Stop();
 			} else {
 				nDrain++;
-				DoDrainRecord(thisNode);
+				DoDrainRecord(n);
+//				if (Bdrain == true && aType == my_gene_Algor)
+//					BroadcastDrainNotice(n);
 			}
 		} else {
 			remaingJ[id] = newValue;
 			totalConsumed+=consumedJ;
 			if (Banim) {
 				double remainingPer = remaingJ[id] / initialJ;
-				UpdateNodesColorByEnergy(thisNode, remainingPer, thisNt);
+				UpdateNodesColorByEnergy(n, remainingPer, thisNt);
 			}
 		}
 		break;

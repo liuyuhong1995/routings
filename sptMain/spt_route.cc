@@ -99,7 +99,7 @@ uint32_t AnalyzeSptPacket(stringstream &ss, Ipv4Address &source) {
 		si << *p;
 		p++;
 	}
-	source = Ipv4Address(si.str().c_str());   //source不是输入参数吗？
+	source = Ipv4Address(si.str().c_str());   
 	NS_LOG_LOGIC(FUC<<"source = "<<source<<", jumps = "<<jumps);
 	return jumps;
 }

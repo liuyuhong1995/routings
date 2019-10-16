@@ -38,7 +38,7 @@ namespace ns3 {
 	Ipv4Address GetNodeIpv4Address(Ptr<Node> n);
 	Ptr<Node> GetNodePtrFromIpv4Adr(Ipv4Address adr,NodeContainer sinkNodes,NodeContainer senseNodes,NodeContainer mobileSinkNode);
 	void FindInrangeNodes(NodeContainer allNodes);
-	double GetDistanceOf2Nodes(Ptr<Node> srcN, Ptr<Node> remN);
+	inline double GetDistanceOf2Nodes(Ptr<Node> srcN, Ptr<Node> remN);
 }
 
 #endif

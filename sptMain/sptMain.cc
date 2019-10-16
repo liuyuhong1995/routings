@@ -12,6 +12,7 @@
 #include "sink-record.h"
 #include "sense-sink-match-table.h"
 #include "log-helper.h"
+
 #include "math.h"
 #include "time.h"
 #include "stdlib.h"    //标准库头文件
@@ -22,7 +23,6 @@
 #include <vector>
 #include <string>
 #include <iomanip>
-
 //#include "constant-velocity-loop-mobility-model.h-backup"
 
 //ADD BY ZLB
@@ -30,6 +30,7 @@
 #include "final_record.h"
 #include "sink_check.h"
 #include "spt_route.h"
+#include "data_gather.h"
 #include "tool.h"
 
 using namespace ns3;
@@ -77,7 +78,6 @@ double maxY;
 double sinkSpeed;
 double mSinkTraceY;
 bool gridTest=false;
-uint32_t mobilityModel=0;
 
 //Data packet
 uint32_t pktSize = 25*dataInterval;//25为单位时间senseNode产生的字节数
@@ -87,15 +87,12 @@ double oldBytesGathered=0;
 static int32_t maxPktSize=2000;//For test
 
 //Energy
-uint16_t energyMode = 0; 
 double initialJ = 5.0;
 bool eTrace = true; //whether to enable the EnergySource trace
 double totalConsumed=0;
 uint32_t energyTraceIndex=0;//The global id of node to trace energy, default 0 means no trace
 double TxPara=0.000006;//0.000006J/Bytes for Tx
 double RxPara=0.000006;//0.000006J/Bytes for Rx
-double TxPara1=0.000006;
-double RxPara1=0.000006;
 uint32_t nDrain=0;
 double Tgather=0.65;
 
@@ -121,9 +118,8 @@ uint32_t firstDrainedSinkId=0;
 double firstDrainedNodeTime=0;
 
 string thisSimPath;//simulation path
-string filename="filename";
 string exeName="sptMain";
-string simFolderName="/home/wsn/sim_temp/";
+string simFolderName="/home/z/sim_temp/";
 
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
@@ -189,7 +185,7 @@ void TransmitDataPacketToMobileSink(Ptr<Socket> sct, Ptr<Packet> pkt) {
 		NS_LOG_INFO(
 				TIME_STAMP_FUC<<sinkAdr<<" sent "
 				<<pktSize<<"Bytes data to the mobile sink");
-		UpdateEnergySources(sct->GetNode(),mobileSinkNode.Get(0),pkt, 0,sinkNodes,mobileSinkNode); 
+		UpdateEnergySources(sct->GetNode(), pkt, 0,sinkNodes,mobileSinkNode);
 		msRecord.UpdateRecordNode(sinkAdr, 0, pktSize);   //接收比特数增多
 		sRecord.UpdateAfterDataGathering(sinkAdr, (-1)*pktSize);  //datatosend减少
 	}else
@@ -201,9 +197,9 @@ void TransmitDataPacketToMobileSink(Ptr<Socket> sct, Ptr<Packet> pkt) {
 ///*
 // * 设置接收端是否开始采集数据标志
 // */
-void SetDataGatheringFlag(bool flag){
-	doMobileSink = flag;
-}
+//void SetDataGatheringFlag(bool flag){
+//	doMobileSink = flag;
+//}
 
 /*
  * 用于sinkNode节点接收mobileSink节点的数据请求
@@ -339,7 +335,7 @@ void MobileSinkRequestDataGathering() {
 			tid);
 	mobileSinkSocket->Connect(broadcastAdr);
 	mobileSinkSocket->SetAllowBroadcast(true);	//socket发送广播必须有这么一个设置
-	mobileSinkSocket->Send(mobileSinkPkt);
+	mobileSinkSocket->Send(mobileSinkPkt); // UDP 广播形式的包
 	mobileSinkSocket->Close();
 	Simulator::Schedule(Seconds(dataGatherReqInterval),&MobileSinkRequestDataGathering);//dataGatherReqInterval=1.0
 	NS_LOG_LOGIC(std::endl<<TIME_STAMP_FUC<<"...");
@@ -405,7 +401,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 			Ptr<Socket> srcSoc = Socket::CreateSocket(localNode, tid);
 			srcSoc->Connect(gateAdr);
 			srcSoc->Send(dataPkt);
-			UpdateEnergySources(localNode,GetNodePtrFromIpv4Adr(gatewayAdr,sinkNodes,senseNodes,mobileSinkNode),dataPkt, 0,sinkNodes,mobileSinkNode); 
+			UpdateEnergySources(localNode, dataPkt, 0,sinkNodes,mobileSinkNode);
 			NS_LOG_LOGIC(TIME_STAMP_FUC<<"Socket from "<<localAdr<<" launched!");
 			if (Brotate == true && aType == my_gene_Algor) {
 				GatewayRotate(localAdr, sinkAdr);
@@ -473,14 +469,14 @@ void PrepareDataToSink() {
 		NS_LOG_DEBUG(TIME_STAMP<<"SPT done, sptDoneTime = "<<sptDoneTime);
 		stringstream ss;
 		ss<<thisSimPath<<exeName<<"-original.route";
-		jctChain.ListJumpCountTableChain(ss.str().c_str());  //意思是把跳数链表列到ss文件名中吗？
+		jctChain.ListJumpCountTableChain(ss.str().c_str());  // 列出所有Sense节点的地址，sink节点地址，跳数和网关地址
 		ss.str("");
 		ss.clear();
 		NS_LOG_DEBUG(std::endl<<TIME_STAMP_FUC<<"...");
-		RemoveFutileNodes(senseNodes,senseDevices,sinkNodes,mobileSinkNode);  //为什么要删除无效的节点？
+		RemoveFutileNodes(senseNodes,senseDevices,sinkNodes,mobileSinkNode);   // 移除无效节点
 		NS_LOG_DEBUG(TIME_STAMP_FUC<<"RemoveFutileNodes"<<",nSenses="
 				<<nSenses<<" including nSinks="<<nSinks);
-		PssmTable = new SenseSinkMatchTable(jctChain, sinkNodes, aType,thisSimPath,exeName);
+		PssmTable = new SenseSinkMatchTable(jctChain, sinkNodes, aType,thisSimPath,exeName);  
 //		if (aType == gene_Algor || aType == my_gene_Algor) {
 //			NS_LOG_LOGIC("SetPopNum and  SetGeneIteration");
 //			PssmTable->SetPopNum(initialPopNum);
@@ -488,7 +484,7 @@ void PrepareDataToSink() {
 //		}
 		NS_LOG_DEBUG(std::endl<<TIME_STAMP_FUC
 				<<"Do sense sink match, algorithm="<<aType);
-		PssmTable->DoMatch();
+		PssmTable->DoMatch();   
 		NS_LOG_DEBUG(TIME_STAMP_FUC<<"Sense sink match, done");
 		double timeNow = Simulator::Now().GetSeconds();
 		double nextTurnPoint = 0.0;
@@ -498,7 +494,7 @@ void PrepareDataToSink() {
 		double delay = nextTurnPoint - timeNow;
 		dataGenerationStartTime = nextTurnPoint;
 		NS_LOG_DEBUG(std::endl<<TIME_STAMP<<"(DataToSink) will start in "<<delay<<" seconds...");
-		Simulator::Schedule(Seconds(delay), &DataToSink);
+		Simulator::Schedule(Seconds(delay), &DataToSink);  
 		Simulator::Schedule(Seconds(0.0), &SetDataGatheringFlag , true);  //domobilesink=true
 
 	} else {
@@ -680,15 +676,15 @@ static inline int32_t ProcessSptPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 void RecvPacketCallback(Ptr<Socket> socket) {
 	Ptr<Packet> pkt;
 	Address from;
-	while ((pkt = socket->RecvFrom(from))) {    //什么意思？
-		Ptr<Packet> packet = pkt->Copy();	//	get packet
+	while ((pkt = socket->RecvFrom(from))) {   
+		Ptr<Packet> packet = pkt->Copy();	
 		nodeType nType;
 		pktType pType;
 		if (packet->GetSize() > 0) {
 			Ptr<Node> thisNode = socket->GetNode();	//这里这个socket是received socket，不是发送的那个
 			Ipv4Header h;
-			packet->PeekHeader(h);  //什么意思？
-			packet->RemoveHeader(h);  //什么意思？
+			packet->PeekHeader(h);  
+			packet->RemoveHeader(h);  
 
 			pType = pktType(h.GetIdentification());
 			nType = CheckNodeType(thisNode,sinkNodes,mobileSinkNode.Get(0));
@@ -714,15 +710,14 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 
 			case sink_Type: {	//sinkNode收到packet
 				switch (pType) {
-				case sinkCheck_Type: {///收到sinkCheck_Type的packet 
+				case sinkCheck_Type: {///收到sinkCheck_Type的packet
 					ProcessSinkCheckPacket(thisNode, packet, h);
 //					ProcessSinkCheckPacket(thisNode, packet, h,sinkNodes,mobileSinkNode,senseNodes);
 					break;
 				}
 				case data_Type: {///收到data_Type的packet，汇聚数据
 					if (CheckRemainingJ(thisNode)) {
-						Ipv4Address sourceAdr = h.GetSource();
-						UpdateEnergySources(thisNode, GetNodePtrFromIpv4Adr(sourceAdr,sinkNodes,senseNodes,mobileSinkNode),packet, 1,sinkNodes,mobileSinkNode); 
+						UpdateEnergySources(thisNode, packet, 1,sinkNodes,mobileSinkNode);
 						ProcessDataPacket(thisNode, packet, h);
 					}
 					break;
@@ -741,8 +736,7 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 				switch (pType) {
 				case data_Type: {///收到data_Type的packet，将执行中继
 					if (CheckRemainingJ(thisNode, packet)) {
-						Ipv4Address sourceAdr = h.GetSource();
-					    UpdateEnergySources(thisNode, GetNodePtrFromIpv4Adr(sourceAdr,sinkNodes,senseNodes,mobileSinkNode),packet, 1,sinkNodes,mobileSinkNode); 
+						UpdateEnergySources(thisNode, packet, 1,sinkNodes,mobileSinkNode);
 						ProcessDataPacket(thisNode, packet, h);
 					}
 					break;
@@ -810,7 +804,7 @@ void delieveryPrepareSpt(){    //传送准备的spt
 /*
  * 创建系统仿真文件夹
  */
-void createSimFolder(){            ///出现不明问题，无法创建文件
+void createSimFolder(){
 	time_t rawTime;    //定义时间变量值rawTime
 	time(&rawTime);    //取当前工作时间值，并赋值给rawTime
 	struct tm *timeInfo;   //定义tm的结构指针
@@ -824,7 +818,6 @@ void createSimFolder(){            ///出现不明问题，无法创建文件
 	ssi<<(timeInfo->tm_year+1900)<<"-";
 	ssi<<setw(2)<<setfill('0')<<right<<(timeInfo->tm_mon+1)<<"-";
 	ssi<<setw(2)<<setfill('0')<<right<<timeInfo->tm_mday;
-	NS_LOG_DEBUG("MAKE FILE OK");   
 	mkdir(ssi.str().c_str(), S_IRWXU);
 
 	//创建sim结果子文件夹，时间为目录名
@@ -906,19 +899,13 @@ void createMobilityModel(){
 	MobilityHelper mobility;
 	//test grid position allocator
 	if (gridTest) {
-		switch(mobilityModel)
-		{case 0:
-		    mobility.SetPositionAllocator("ns3::GridPositionAllocator", "GridWidth",
-			UintegerValue(5), "MinX", DoubleValue(0.0), "MinY",
-			DoubleValue(0.0), "DeltaX", DoubleValue(10.0), "DeltaY",
-			DoubleValue(10.0));
-			break;
-			case 1:  
-			mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",  
-			"X",StringValue("20.0"),"Y",StringValue("20.0"));
-		}
+		mobility.SetPositionAllocator("ns3::GridPositionAllocator", "GridWidth",
+				UintegerValue(5), "MinX", DoubleValue(0.0), "MinY",
+				DoubleValue(0.0), "DeltaX", DoubleValue(10.0), "DeltaY",
+				DoubleValue(10.0));
 		mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 		mobility.Install(senseNodes);     //为sense节点安装移动模型
+
 		maxX = 40;
 		maxY = 10*(std::ceil(nNodes*1.0/5));
 		maxY=40;
@@ -928,7 +915,8 @@ void createMobilityModel(){
 
 		vector <Ptr<ConstantPositionMobilityModel> > cpmm(5);
 		for (uint32_t i = 0; i < 5; i++)
-			cpmm[i] =senseNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
+			cpmm[i] =
+					senseNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
 		cpmm[0]->SetPosition(Vector(20, 30, 0));
 		cpmm[1]->SetPosition(Vector(20, 20, 0));
 		cpmm[2]->SetPosition(Vector(10, 10, 0));
@@ -950,7 +938,6 @@ void createMobilityModel(){
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(mobileSinkNode);
 	NS_LOG_DEBUG("Install mobility done!");
-
 }
 /*
  * 创建wifi通信设备
@@ -990,8 +977,8 @@ void createWifiDevice(){
 /** install PHY + MAC **/
 	senseDevices = wifi.Install(wifiPhy, wifiMac, senseNodes);
 	mobileSinkDevice = wifi.Install(wifiPhy, wifiMac, mobileSinkNode);
-	ssi<<thisSimPath<<exeName;
 
+	ssi<<thisSimPath<<exeName;
 	//wifiPhy.EnablePcap(ssi.str().c_str(), mobileSinkNode.Get(0)->GetId(), 0, true);
 	ssi.str("");
 	ssi.clear();
@@ -1052,7 +1039,6 @@ void createXml(){
 	}
 	NS_LOG_DEBUG("Set anmi done!");
 }
-
 void finalRecord(){
 	/**Record the total Bytes gathered, network lifetime, the percentage of data gathered/data generated**/
 	totalBytesGathered = msRecord.GetTotalRecvBytes();
@@ -1089,8 +1075,8 @@ int main(int argc, char* argv[]) {
 	//step0:全局变量初始化
 	sinkSpeed = 5.0;  //sink moving speed
 	maxX=40.0;
-	maxY=40.0; //the boundary of the scenario(40*40)
-	sinkCheckDoneTime = (maxX * 2) / sinkSpeed;  //Time to stop sink check
+	maxY = 40.0; //the boundary of the scenario(40*40)
+	sinkCheckDoneTime = (maxX * 2) / sinkSpeed;//Time to stop sink check
 	mSinkTraceY = maxY/2; //the y value of sink path
 	simStartRealTime = clock();
 
@@ -1113,7 +1099,6 @@ int main(int argc, char* argv[]) {
 //	cmd.AddValue("iterationCounts","Iteration times for GeneticMatchAlgorithm",iterationCounts);
 	cmd.AddValue("pktSize","Size of data packe",pktSize);
 	cmd.AddValue("gridTest","Whether to use grid tes",gridTest);
-    cmd.AddValue("mobilityModel","Which mobility model to use",mobilityModel);
 	cmd.AddValue("Banim","Whether to generate animatit",Banim);
 	cmd.AddValue("energyTraceIndex","The global id of node to trace energy",energyTraceIndex);
 	cmd.AddValue("dataInterval","The time interval of data generation",dataInterval);
@@ -1123,27 +1108,27 @@ int main(int argc, char* argv[]) {
 	cmd.AddValue("BsinglePkt","Whether to enable single pkt test ",BsinglePkt);
 	cmd.AddValue("Bdrain","Whether to enable drain notice broadcast ",Bdrain);
 	cmd.AddValue("Tgather","The percentage of threshold of data gathering percentage,(0,1) ",Tgather);
-	cmd.AddValue("energyMode","energy consumption mode",energyMode);   
-	///cmd.AddValue("filePath","input filename",filePath);
 	cmd.Parse(argc, argv);    
 
 	//Log enable
+	LogComponentEnable("RectangleAmend", LOG_LEVEL_ERROR);
 	LogComponentEnable("GatewayTable", LOG_LEVEL_ERROR);
-
+	NS_LOG_DEBUG("this is input !");
 	NS_LOG_DEBUG("Configure done!");
 	//放在cmd.Parse()后面才会生效的变量赋值
 	nSenses = nNodes;
 	simStopTime=totalTime;
 
 	//step 3:创建仿真文件夹
-	createSimFolder();     ///出现问题
+	createSimFolder();
 	//step 4:设置不同文件log级别
-	setLog();       
+	setLog();
 	//step 5:设置基础网络
 	netSet();
-	//step 6:创建节点  //
+	//step 6:创建节点
 	createNode();
 	//step 7:创建并安装移动模型
+	//  需要改动的地方  --- *** -- 移动模型
 	createMobilityModel();
 	//step 8:创建wifi设备
 	createWifiDevice();
@@ -1155,7 +1140,7 @@ int main(int argc, char* argv[]) {
 	createXml();
 	//step 12:节点安装能量
 	InstallEnergy(senseNodes);   //开始时只有感知节点和ms节点，所以只在感知节点安装能量即可
-	NS_LOG_DEBUG("energy mode is "<<energyMode<<"!");      
+
 	//step 13:sinkCheck检测开始与停止
 	Simulator::Schedule(Seconds(simStartTime), &PrepareRequestSinkCheck,mobileSinkNode); //simStartTime为0
 	Simulator::Schedule(Seconds(simStartTime), &PrepareRequestDataGathering);
@@ -1163,8 +1148,9 @@ int main(int argc, char* argv[]) {
 	Simulator::Schedule(Seconds(sinkCheckDoneTime), &SortSinkNodesByAdr, sinkNodes);
 	//step 14：开始spt路由发现
 	sptStartTime = sinkCheckDoneTime + 1;
-	//Simulator::Schedule(Seconds(sptStartTime), &PrepareSptRouting);
 	//解耦代码时候，这里出现参数传递问题，测试用   暂时改为中间函数传递的方法
+
+	//  ********  需要改的地方
 	Simulator::Schedule(Seconds(sptStartTime), &delieveryPrepareSpt); //sptStartTime=17s
 	//step 15：开始数据传输
 	Simulator::Schedule(Seconds(sptStartTime+5),&PrepareDataToSink);//这里设置了Mobile接收端数据采集开始标志

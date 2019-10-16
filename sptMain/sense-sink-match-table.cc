@@ -318,7 +318,7 @@ void SenseSinkMatchTable::SptMatchAlgorithm() {
 		MatchNode *currentNode = GetHead();
 		RoutingNode *currentRoutingNode;
 		RoutingNode *rN;
-		while (tN != NULL) {
+		while (tN != NULL) {    // 遍历操作
 			uint32_t lowestJumpsCount=0;
 			uint32_t lowestJumps=0;
 			rN = tN->jcTable->GetHead();
@@ -351,7 +351,7 @@ void SenseSinkMatchTable::SptMatchAlgorithm() {
 						lowestJumpsCount++;
 						lowestJumps=currentRoutingNode->jumps;
 					}
-					currentRoutingNode = currentRoutingNode->next;
+					currentRoutingNode = currentRoutingNode->next; // 遍历链表
 				}//while done
 
 				NS_LOG_LOGIC("lowestJumpsCount="<<lowestJumpsCount<<", lowestJumps="<<lowestJumps);

@@ -175,7 +175,7 @@ void JumpCountTable::ListTable(const std::string name) {
 		NS_LOG_ERROR("JumpCountTable::ListTable error: Empty table for local = "<<GetLocalAdr()<<"!");
 	} else {
 		std::stringstream ss;
-		ss<<"/home/wsn/sim_temp/record_files/"<<name<<"-"<<GetLocalAdr();
+		ss<<"/home/wsn/record_files/"<<name<<"-"<<GetLocalAdr();
 		std::ofstream of(ss.str().c_str());
 		ss.str("");
 		NS_LOG_INFO("The routing table of "<<GetLocalAdr()<<" is as follows:");
