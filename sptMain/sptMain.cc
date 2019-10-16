@@ -119,7 +119,7 @@ double firstDrainedNodeTime=0;
 
 string thisSimPath;//simulation path
 string exeName="sptMain";
-string simFolderName="/home/z/sim_temp/";
+string simFolderName="/home/wsn/sim_temp/";
 
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
