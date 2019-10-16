@@ -83,9 +83,9 @@ void recordfile(){
 	stringstream si;
 	ofstream of;
 	if (rewrite) {
-		of.open("/home/jaygy/jgy/record_files/result-pp2.record");
+		of.open("/home/wsn/sim_temp/result-pp2.record");
 	} else {
-		of.open("/home/jaygy/jgy/record_files/result-pp2.record", ios::app);   //后面什么意思？
+		of.open("/home/wsn/sim_temp/record_files/result-pp2.record", ios::app);   //后面什么意思？
 	}
 
 	NS_LOG_UNCOND("");
@@ -137,7 +137,7 @@ void recordfile(){
 
 }
 void gnuplot (){     //这个有啥作用呢？
-	string simFolderName="/home/jaygy/jgy/sim_temp/";
+	string simFolderName="/home/wsn/sim_temp/";
 	stringstream si;
 	ofstream of;
 	si<<thisSimPath<<exeName<<"-dynamic-DGP.gnu";
