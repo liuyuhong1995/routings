@@ -581,7 +581,7 @@ void createNode(){
 	// ns2.Install ();
 
 	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/test.ns_movements";
+		std::string traceFile = "scratch/"+mobilityModel+"/speed30.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 	}
@@ -620,14 +620,16 @@ void createMobilityModel(){
 			mobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
 				"Speed", StringValue ("ns3::UniformRandomVariable[Min=1.0|Max=4.0] "),
 				"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
-				"Bounds", StringValue ("0|600|0|450"));
+				"Bounds", StringValue ("0|1000|0|10000"));
 		}
 
 	}
 	if(isEntity){
 		mobility.Install(senseNodes);
 	}
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
 
 	
 	//接收器安装移动模型
@@ -637,7 +639,7 @@ void createMobilityModel(){
 
 	// mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	// mobility.Install(mobileSinkNode);
-	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(300, 250, 0));
+	// mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(300, 250, 0));
 
 	NS_LOG_DEBUG("Install mobility done!");
 }

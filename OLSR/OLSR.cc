@@ -169,15 +169,16 @@ void createNode(){
 	if(moveSpeed.length()>0){
 		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
 	}else{
-		traceFile = "scratch/"+mobilityModel+"/test.ns_movements";
+		traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
 	}
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 	ns2.Install ();
 
-	for(uint32_t i=0;i<size-1;i++){
+	for(uint32_t i=0;i<size;i++){
 		nodes.Add(c.Get(i));
 	}
-	mobileSinkNode.Add(c.Get(size-1));
+	//mobileSinkNode.Add(c.Get(size-1));
+	mobileSinkNode.Create(1);
 	NS_LOG_DEBUG("Create nodes done!");
 }
 
@@ -200,8 +201,8 @@ void createMobilityModel(){
 	}else{
 		ObjectFactory pos1;
 		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=600.0]"));
-		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=450.0]"));
+		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
 		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create()->GetObject<PositionAllocator> ();
 
 		mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
@@ -211,6 +212,9 @@ void createMobilityModel(){
 										"PositionAllocator", PointerValue (taPositionAlloc1)
 										);
 	}
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
 
 }
 //创建网络设备
@@ -401,7 +405,7 @@ int main(int argc, char **argv)
     createNode();
 
 	//已经在createNode中设置接收器移动
-	// createMobilityModel();
+    createMobilityModel();
 	createWifiDevice();
 	installInternetStack();
 	createSocketCallBack();

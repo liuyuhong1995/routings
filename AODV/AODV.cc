@@ -63,7 +63,7 @@ uint32_t size=10;
 double step=100;
 
 int pktSize = 1500;
-int maxPackets = 900;
+int maxPackets = 3000;
 double interval = 8;
 Time interPacketInterval = Seconds (interval);
 
@@ -151,15 +151,18 @@ static void GenerateTraffic (Ipv4Header ipv4Header,Ptr<Packet> pkt,Ptr<Socket> s
 void createNode(){
 	c.Create(size);
 	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/test.ns_movements";
+		std::string traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
+		
 	}
 
-	for(uint32_t i=0;i<size-1;i++){
+	//for(uint32_t i=0;i<size-1;i++){
+	for(uint32_t i=0;i<size;i++){
 		nodes.Add(c.Get(i));
 	}
-	mobileSinkNode.Add(c.Get(size-1));
+	// mobileSinkNode.Add(c.Get(size-1));
+	mobileSinkNode.Create(1);
 	NS_LOG_DEBUG("Create nodes done!");
 }
 
@@ -178,8 +181,8 @@ void createMobilityModel(){
 		if(mobilityModel == "RWP"){
 			ObjectFactory pos1;
 			pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-			pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=600.0]"));
-			pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=450.0]"));
+			pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+			pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
 			Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
 			mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
 											"Speed", StringValue ("ns3::UniformRandomVariable[Min=1.0|Max=40.0]"),
@@ -190,10 +193,13 @@ void createMobilityModel(){
 			mobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
 				"Speed", StringValue ("ns3::UniformRandomVariable[Min=1.0|Max=4.0] "),
 				"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
-				"Bounds", StringValue ("0|600|0|450"));
+				"Bounds", StringValue ("0|1000|0|1000"));
 		}
 	}
-	// mobility.Install(c);
+	
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
 
 	if(isEntity){
 		mobility.Install(nodes);

@@ -240,11 +240,11 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address s
 		// cout<<"gatewayId:"<<gatewayId<<" ,distance:"<<distance_1<<endl;
 		//算法一:链路强化  
 		if(gatewayId == 1024 || distance_1>maxDis){
-			// cout<<"请求中继----->"<<endl;
+			cout<<"请求中继----->"<<endl;
 			Vector mid = getMiddle(location_1,location_2);
 			uint32_t id = findMinDistanceRelay(localNode);
 			//checded
-			// cout<<"--------------------------->"<<id<<endl;
+			cout<<"--------------------------->"<<id<<endl;
 			if(id == 1024){
 				// id = nNodes + rand()%nRelayNodes + 1; //0到nCandidates-1的范围的整数
 				// cout<<id<<endl;
@@ -680,7 +680,7 @@ void createNode(){
 	// ns2.Install ();
 
 	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/rocomar_speed10.ns_movements";
+		std::string traceFile = "scratch/"+mobilityModel+"/rocomar_speed35.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 	}
@@ -706,21 +706,23 @@ void createMobilityModel(){
 	}else {
 		ObjectFactory pos1;
 		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=600.0]"));
-		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=450.0]"));
+		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
 		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
-
+/*
 		mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
 										"Speed", StringValue ("ns3::ConstantRandomVariable[Constant=3]"),
 										"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=10.0]"),
 										"PositionAllocator", PointerValue (taPositionAlloc1)
-										);
+										); */
+		mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	}
 	// mobility.Install(senseNodes);
 	if(isEntity){
 		mobility.Install(senseNodes);
 	}
 	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
 	//checked
 	
 	// if(isStatic){
@@ -732,16 +734,16 @@ void createMobilityModel(){
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	// mobility.Install(mobileSinkNode);
 	mobility.Install(relayNodes);
-	// vector <Ptr<ConstantPositionMobilityModel>> cpmm(nRelayNodes);
-	// for (uint32_t i = 0; i < nRelayNodes; i++)
-	// 	cpmm[i] = relayNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
-	// cpmm[0]->SetPosition(Vector(150, 150, 0));
-	// cpmm[1]->SetPosition(Vector(150, 340, 0));
-	// cpmm[2]->SetPosition(Vector(450, 150, 0));
-	// cpmm[3]->SetPosition(Vector(450, 340, 0));
-	// cpmm[4]->SetPosition(Vector(300, 450, 0));
+    vector <Ptr<ConstantPositionMobilityModel>> cpmm(nRelayNodes);
+    for (uint32_t i = 0; i < nRelayNodes; i++)
+ 	cpmm[i] = relayNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
+    cpmm[0]->SetPosition(Vector(150, 150, 0));
+	cpmm[1]->SetPosition(Vector(150, 340, 0));
+	cpmm[2]->SetPosition(Vector(450, 150, 0));
+	cpmm[3]->SetPosition(Vector(450, 340, 0));
+	cpmm[4]->SetPosition(Vector(300, 450, 0));
 
-	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(300, 225, 0));
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
 }
 /*
  * 创建wifi通信设备
