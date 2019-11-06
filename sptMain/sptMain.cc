@@ -12,7 +12,7 @@
 #include "sink-record.h"
 #include "sense-sink-match-table.h"
 #include "log-helper.h"
-
+#include "ns3/flow-monitor-module.h"
 #include "math.h"
 #include "time.h"
 #include "stdlib.h"    //标准库头文件
@@ -37,7 +37,6 @@ using namespace ns3;
 using namespace std;
 
 NS_LOG_COMPONENT_DEFINE("sptMainTestScript");
-
 /*
  * 定义UdpSocketFactory为socket的类型和socket的广播地址
  */
@@ -49,6 +48,7 @@ InetSocketAddress broadcastAdr = InetSocketAddress(
 static std::string phyMode("DsssRate11Mbps");
 static double Prss = -80; //dBm
 static double offset = 81;  //I don't know
+uint32_t size=21;
 /*
  * Simulator initial global parameters
  */
@@ -68,6 +68,8 @@ double sinkCheckReqInterval = 1.0;//(5.0)移动汇聚请求汇聚检测的时间
 static double dataGatherReqInterval = sinkCheckReqInterval;
 stringstream ssi;
 
+
+void UpdateInstSpeed(double interval);
 //Topology
 uint32_t nNodes = 20;
 uint32_t nSenses = 0;
@@ -152,7 +154,13 @@ NetDeviceContainer mobileSinkDevice;
 //Energy source pointer
 EnergySourceContainer *senseSources=0;
 double remaingJ[MAX_NUM];
-
+vector<vector<double> >etx(20,vector<double>());
+double x_old[20];
+double y_old[20];
+double x_new[20];
+double y_new[20];
+vector<vector<double> >instSpeed(20,vector<double>());
+vector<vector<double> >recvRatio(20,vector<double>());
 //Ipv4 related container
 Ipv4InterfaceContainer senseIfs;
 Ipv4InterfaceContainer mobileSinkIf;
@@ -417,6 +425,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
  * 全体senseNodes将按一定的数据生成率向某一个sinkNode发送感知到的数据
  */
 void DataToSink() {
+
 	double interval = 0;	//产生随机的发包间隔
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();
 			i++) {
@@ -438,6 +447,7 @@ void DataToSink() {
 					 * 所有senseNode按照一个根据senseNode的数量的时间间隔上报数据
 					 */
 					interval+=(dataInterval-1.0)*1.0/(nSenses-nSinks);   //datainteval=5.0
+						UpdateInstSpeed(dataInterval);
 				}
 				break;
 			}
@@ -454,6 +464,71 @@ void DataToSink() {
 	if (!BsinglePkt)
 		Simulator::Schedule(Seconds(dataInterval), &DataToSink);
 }
+
+
+/*
+fuction : UpdataEtx
+inputParameters:   Ptr<Node> srcN, Ptr<Node> remN
+description:  函数的功能：更新位置， 更新速度， 计算Etx
+*/
+void UpdateEtx(Ptr<Node> srcN, Ptr<Node> remN){
+	
+}
+
+
+void UpdateInstSpeed(double interval){
+	for(int k=0;k<20;k++){
+		instSpeed[k].resize(20);
+		recvRatio[k].resize(20);
+		etx[k].resize(20);
+	
+	}
+			for (NodeContainer::Iterator i = senseNodes.Begin();
+				i != senseNodes.End(); i++) {
+			Ptr<Node> n = *i;
+			// 拿到位置
+			Ptr<ConstantPositionMobilityModel> srcCpmm = n->GetObject<
+					ConstantPositionMobilityModel>();
+			Vector sourceLocation = srcCpmm->GetPosition();
+				for (NodeContainer::Iterator j = senseNodes.Begin();
+				j != senseNodes.End(); j++) {
+				Ptr<Node> m = *j;
+				Ptr<ConstantPositionMobilityModel> remCpmm = m->GetObject<
+						ConstantPositionMobilityModel>();
+					Vector senseLocation = remCpmm ->GetPosition();
+					x_old[m->GetId()]=x_new[m->GetId()];
+					y_old[m->GetId()]=y_new[m->GetId()];
+					x_new[m->GetId()]=senseLocation.x;
+					y_new[m->GetId()]=senseLocation.y;
+					double new_distance=std::sqrt((x_new[m->GetId()]-x_new[n->GetId()])*(x_new[m->GetId()]-x_new[n->GetId()])+(y_new[m->GetId()]-y_new[n->GetId()])*(y_new[m->GetId()]-y_new[n->GetId()]));
+					double old_distance=std::sqrt((x_old[m->GetId()]-x_old[n->GetId()])*(x_old[m->GetId()]-x_old[n->GetId()])+(y_new[m->GetId()]-y_old[n->GetId()])*(y_old[m->GetId()]-y_old[n->GetId()]));
+					instSpeed[n->GetId()][m->GetId()]=exp((new_distance-old_distance)/interval);
+					cout<<"Node("<<m->GetId()<<")   Node的x："<<sourceLocation.x<<"Node的y："<<sourceLocation.y<<"instSpeed:"<<instSpeed[n->GetId()][m->GetId()]<<endl;
+				}
+
+			// 
+		}
+}
+//void print(){
+	//for(int i=0;i<20;i++){
+	//std::cout<<")   Node的x："<<x_old[i]<<"Node的y："<<y_old[i]<<endl;
+	//}
+//}
+/*
+void UpdateInstSpeed(Ptr<Node> srcN, Ptr<Node> remN){
+	Ptr<ConstantPositionMobilityModel> srcCpmm = srcN->GetObject<
+	ConstantPositionMobilityModel>();  
+	Vector position1 = srcCpmm->GetPosition();	
+	
+}
+
+void UpdateLastPosition(Ptr<Node> srcN){
+	Ptr<ConstantPositionMobilityModel> srcCpmm = srcN->GetObject<
+		ConstantPositionMobilityModel>();  
+	Vector position = srcCpmm->GetPosition();			
+}
+*/ 
+
 /*
  * 数据发送的准备工作
  * 判断当前时间和sptDoneTime之间的差，
@@ -622,6 +697,7 @@ static inline int32_t ProcessSptPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 		NS_LOG_LOGIC(TIME_STAMP_FUC<<"local = "<<local<<" is not in the chain, insert it");
 		jctChain.InsertNode(local);
 		tN = jctChain.InquireNode(local);
+		
 		tN->jcTable->UpdateTableNode(source, gateway, pktJumps + 1);   //source为汇聚节点的地址
 		Simulator::Schedule(Seconds(interval), &ContinueSptRouting, thisNode,
 				(pktJumps + 1), source);
@@ -881,19 +957,70 @@ void netSet(){
 	Config::SetDefault("ns3::WifiRemoteStationManager::NonUnicastMode",
 			StringValue(phyMode));
 }
+
 /*
- * 创建节点
- */
+
+void createNode(){
+	allNodes.Create(nNodes);
+	senseNodes.Add(allNodes);
+	std::string traceFile;
+	traceFile = "scratch/RPGM/speed10.ns_movements";
+
+	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
+	ns2.Install ();
+
+
+	
+	mobileSinkNode.Create(1);
+	NS_LOG_DEBUG("Create nodes done!");
+}
+
+void createMobilityModel(){
+	MobilityHelper mobility;
+	// mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+	// 							"Bounds", RectangleValue (Rectangle (-50, 50, -25, 50)));
+
+	mobility.SetPositionAllocator("ns3::GridPositionAllocator",
+			"GridWidth",UintegerValue(5),
+			"MinX", DoubleValue(0.0),
+			"MinY",DoubleValue(0.0),
+			// "DeltaX", DoubleValue(10.0),
+			// "DeltaY",DoubleValue(10.0));
+			"DeltaX", DoubleValue(150.0),
+			"DeltaY",DoubleValue(150.0));
+
+
+		ObjectFactory pos1;
+		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create()->GetObject<PositionAllocator> ();
+
+		mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
+										//"Speed", StringValue ("ns3::UniformRandomVariable[Min=0|Max=25"),
+										"Speed", StringValue ("ns3::UniformRandomVariable[Min=1|Max=10]"),//2 6 10 14 18 22 26 30 34 38
+										"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
+										"PositionAllocator", PointerValue (taPositionAlloc1)
+										);
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
+
+}
+*/
+
+ 
+
+
+
 void createNode(){
 	//Create nodes
 	mobileSinkNode.Create(1);
 	allNodes.Create(nNodes);
 	senseNodes.Add(allNodes);
 	NS_LOG_DEBUG("Create nodes done!");
-}
-/*
- * 创建移动模型并安装到节点
- */
+}  
+
 void createMobilityModel(){
 	//Install mobility
 	MobilityHelper mobility;
@@ -939,6 +1066,8 @@ void createMobilityModel(){
 	mobility.Install(mobileSinkNode);
 	NS_LOG_DEBUG("Install mobility done!");
 }
+
+
 /*
  * 创建wifi通信设备
  */
@@ -1100,6 +1229,7 @@ int main(int argc, char* argv[]) {
 	cmd.AddValue("pktSize","Size of data packe",pktSize);
 	cmd.AddValue("gridTest","Whether to use grid tes",gridTest);
 	cmd.AddValue("Banim","Whether to generate animatit",Banim);
+	
 	cmd.AddValue("energyTraceIndex","The global id of node to trace energy",energyTraceIndex);
 	cmd.AddValue("dataInterval","The time interval of data generation",dataInterval);
 	cmd.AddValue("TxPara","The parameter of Tx",TxPara);
@@ -1126,8 +1256,11 @@ int main(int argc, char* argv[]) {
 	//step 5:设置基础网络
 	netSet();
 	//step 6:创建节点
+	
+	
 	createNode();
 	//step 7:创建并安装移动模型
+	cout<<"create Node success";
 	//  需要改动的地方  --- *** -- 移动模型
 	createMobilityModel();
 	//step 8:创建wifi设备
@@ -1136,6 +1269,7 @@ int main(int argc, char* argv[]) {
 	installInternetStack();  
 	//step 10:设置socket回调
 	createSocketCallBack();  //节点收到包后回调
+	
 	//step 11:生成xml动画文件
 	createXml();
 	//step 12:节点安装能量
