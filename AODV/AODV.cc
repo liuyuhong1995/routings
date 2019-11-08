@@ -151,7 +151,7 @@ static void GenerateTraffic (Ipv4Header ipv4Header,Ptr<Packet> pkt,Ptr<Socket> s
 void createNode(){
 	c.Create(size);
 	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
+		std::string traceFile = "scratch/"+mobilityModel+"/nomadic_speed20.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 		
