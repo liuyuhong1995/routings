@@ -13,6 +13,7 @@
 #include "sense-sink-match-table.h"
 #include "log-helper.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/ns2-mobility-helper.h"
 #include "math.h"
 #include "time.h"
 #include "stdlib.h"    //标准库头文件
@@ -74,7 +75,7 @@ void UpdateInstSpeed(double interval);
 uint32_t nNodes = 20;
 uint32_t nSenses = 0;
 uint32_t nSinks = 0;
-double maxDis = 52.0;
+double maxDis = 225.0;
 double maxX;//x length of the scenario
 double maxY;
 double sinkSpeed;
@@ -86,7 +87,7 @@ uint32_t pktSize = 25*dataInterval;//25为单位时间senseNode产生的字节�
 static double totalBytesGenerated;
 double oldBytesGenerated=0;
 double oldBytesGathered=0;
-static int32_t maxPktSize=2000;//For test
+static int32_t maxPktSize=1500;//For test
 
 //Energy
 double initialJ = 5.0;
@@ -477,12 +478,6 @@ void UpdateEtx(Ptr<Node> srcN, Ptr<Node> remN){
 
 
 void UpdateInstSpeed(double interval){
-	for(int k=0;k<20;k++){
-		instSpeed[k].resize(20);
-		recvRatio[k].resize(20);
-		etx[k].resize(20);
-	
-	}
 			for (NodeContainer::Iterator i = senseNodes.Begin();
 				i != senseNodes.End(); i++) {
 			Ptr<Node> n = *i;
@@ -490,23 +485,8 @@ void UpdateInstSpeed(double interval){
 			Ptr<ConstantPositionMobilityModel> srcCpmm = n->GetObject<
 					ConstantPositionMobilityModel>();
 			Vector sourceLocation = srcCpmm->GetPosition();
-				for (NodeContainer::Iterator j = senseNodes.Begin();
-				j != senseNodes.End(); j++) {
-				Ptr<Node> m = *j;
-				Ptr<ConstantPositionMobilityModel> remCpmm = m->GetObject<
-						ConstantPositionMobilityModel>();
-					Vector senseLocation = remCpmm ->GetPosition();
-					x_old[m->GetId()]=x_new[m->GetId()];
-					y_old[m->GetId()]=y_new[m->GetId()];
-					x_new[m->GetId()]=senseLocation.x;
-					y_new[m->GetId()]=senseLocation.y;
-					double new_distance=std::sqrt((x_new[m->GetId()]-x_new[n->GetId()])*(x_new[m->GetId()]-x_new[n->GetId()])+(y_new[m->GetId()]-y_new[n->GetId()])*(y_new[m->GetId()]-y_new[n->GetId()]));
-					double old_distance=std::sqrt((x_old[m->GetId()]-x_old[n->GetId()])*(x_old[m->GetId()]-x_old[n->GetId()])+(y_new[m->GetId()]-y_old[n->GetId()])*(y_old[m->GetId()]-y_old[n->GetId()]));
-					instSpeed[n->GetId()][m->GetId()]=exp((new_distance-old_distance)/interval);
-					cout<<"Node("<<m->GetId()<<")   Node的x："<<sourceLocation.x<<"Node的y："<<sourceLocation.y<<"instSpeed:"<<instSpeed[n->GetId()][m->GetId()]<<endl;
-				}
+				cout<<"Node("<<n->GetId()<<")   Node的x："<<sourceLocation.x<<"Node的y："<<sourceLocation.y<<"instSpeed:"<<endl;
 
-			// 
 		}
 }
 //void print(){
@@ -1015,12 +995,61 @@ void createMobilityModel(){
 
 void createNode(){
 	//Create nodes
-	mobileSinkNode.Create(1);
+	
 	allNodes.Create(nNodes);
-	senseNodes.Add(allNodes);
+	
+	
+	std::string traceFile;
+	traceFile = "scratch/RPGM/speed10.ns_movements";
+	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
+	ns2.Install (); 
+	for(uint32_t i = 0; i < nNodes; i++){
+		senseNodes.Add(allNodes.Get(i));
+	}
+	mobileSinkNode.Create(1);
+	UpdateInstSpeed(1.0);
+	cout<<"test1"<<endl;
 	NS_LOG_DEBUG("Create nodes done!");
-}  
+	
+	
+}
 
+void createMobilityModel(){
+	MobilityHelper mobility;
+
+	mobility.SetPositionAllocator("ns3::GridPositionAllocator",
+			"GridWidth",UintegerValue(5),
+			"MinX", DoubleValue(0.0),
+			"MinY",DoubleValue(0.0),
+			// "DeltaX", DoubleValue(10.0),
+			// "DeltaY",DoubleValue(10.0));
+			"DeltaX", DoubleValue(150.0),
+			"DeltaY",DoubleValue(150.0));
+		ObjectFactory pos1;
+		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create()->GetObject<PositionAllocator> ();
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
+
+}
+
+/*
+void createMobilityModel(){
+	//Install mobility
+	MobilityHelper mobility;	
+
+	Ptr<ListPositionAllocator> lpa = CreateObject<ListPositionAllocator>();
+	lpa->Add(Vector(0, mSinkTraceY/2, 0));
+	mobility.SetPositionAllocator(lpa);
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);
+	NS_LOG_DEBUG("Install mobility done!");
+} 
+*/
+/*
 void createMobilityModel(){
 	//Install mobility
 	MobilityHelper mobility;
@@ -1066,7 +1095,7 @@ void createMobilityModel(){
 	mobility.Install(mobileSinkNode);
 	NS_LOG_DEBUG("Install mobility done!");
 }
-
+*/
 
 /*
  * 创建wifi通信设备
@@ -1202,9 +1231,9 @@ void finalRecord(){
  */
 int main(int argc, char* argv[]) {
 	//step0:全局变量初始化
-	sinkSpeed = 5.0;  //sink moving speed
-	maxX=40.0;
-	maxY = 40.0; //the boundary of the scenario(40*40)
+	sinkSpeed = 500.0;  //sink moving speed
+	maxX=1000.0;
+	maxY = 1000.0; //the boundary of the scenario(40*40)
 	sinkCheckDoneTime = (maxX * 2) / sinkSpeed;//Time to stop sink check
 	mSinkTraceY = maxY/2; //the y value of sink path
 	simStartRealTime = clock();

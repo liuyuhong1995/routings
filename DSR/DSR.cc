@@ -1,6 +1,5 @@
 // #include "ns3/aodv-module.h"
-#include "ns3/olsr-module.h"
-#include "ns3/olsr-header.h"
+#include "ns3/dsr-module.h"
 #include "ns3/core-module.h"
 #include "ns3/energy-module.h"
 #include "ns3/network-module.h"
@@ -24,10 +23,11 @@
 /*
  */
 using namespace ns3;
-using namespace olsr;
+using namespace dsr;
 using namespace std;
 
-NS_LOG_COMPONENT_DEFINE("olsrScript");
+NS_LOG_COMPONENT_DEFINE("dsrScript");
+
 // #define TIME_STAMP Simulator::Now().GetSeconds()<<": "//当前时间
 
 Time netDelay;
@@ -99,8 +99,8 @@ double firstDrainedNodeTime=0;
 bool isStatic  = false;
 
 //仿真文件
-string thisSimPath = "/home/wsn/sim_temp/OLSR/";
-string exeName = "OLSR";
+string thisSimPath = "/home/wsn/sim_temp/DSR/";
+string exeName = "DSR";
 
 
 TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
@@ -138,9 +138,9 @@ void RecvPacketCallback (Ptr<Socket> socket)
 			// std::cout<<"package relay - "<<(receivetime-sendtime)<<std::endl;
 			// std::cout<<"Throughput now - "<<packetsReceived*1024*8/simRunTime<<"bps"<<std::endl;
 		}else{
-			// cout<<"接收器能量用光，停止仿真！："<<endl;
-			//cout<<packetsReceived<<endl;
-			//Simulator::Stop();
+			 cout<<"接收器能量用光，停止仿真！："<<endl;
+			cout<<packetsReceived<<endl;
+			Simulator::Stop();
 		}
     }
     
@@ -151,8 +151,10 @@ void RecvPacketCallback (Ptr<Socket> socket)
 static void GenerateTraffic (Ptr<Packet> pkt,Ptr<Socket> socket)
 { 
 	//这里加入能量消耗，判断能量是否够用，够用以后，发包。
+	
 	if (CheckRemainingJ(socket->GetNode(), pkt)) {
 		socket->Send (pkt);
+		
 		UpdateEnergySources(socket->GetNode(), pkt, 0,mobileSinkNode);//0代表发送，1代表接收
 	}else{
 		socket->Close ();
@@ -169,7 +171,7 @@ void createNode(){
 	if(moveSpeed.length()>0){
 		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
 	}else{
-		traceFile = "scratch/"+mobilityModel+"/nomadic_speed5.ns_movements";
+		traceFile = "scratch/"+mobilityModel+"/speed5.ns_movements";
 	}
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 	ns2.Install ();
@@ -184,34 +186,7 @@ void createNode(){
 
 void createMobilityModel(){
 	MobilityHelper mobility;
-	// mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-	// 							"Bounds", RectangleValue (Rectangle (-50, 50, -25, 50)));
 
-	mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-			"GridWidth",UintegerValue(5),
-			"MinX", DoubleValue(0.0),
-			"MinY",DoubleValue(0.0),
-			// "DeltaX", DoubleValue(10.0),
-			// "DeltaY",DoubleValue(10.0));
-			"DeltaX", DoubleValue(150.0),
-			"DeltaY",DoubleValue(150.0));
-
-	if(isStatic){
-		mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	}else{
-		ObjectFactory pos1;
-		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
-		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
-		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create()->GetObject<PositionAllocator> ();
-
-		mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-										//"Speed", StringValue ("ns3::UniformRandomVariable[Min=0|Max=25"),
-										"Speed", StringValue ("ns3::UniformRandomVariable[Min=1|Max=10]"),//2 6 10 14 18 22 26 30 34 38
-										"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
-										"PositionAllocator", PointerValue (taPositionAlloc1)
-										);
-	}
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(mobileSinkNode);
 	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
@@ -253,22 +228,25 @@ void createWifiDevice(){
 //安装路由协议
 void installInternetStack(){
 
-	// OLSR  路由协议安装
+	// DSR  路由协议安装
+	
 	InternetStackHelper internet = InternetStackHelper();
-	Ipv4ListRoutingHelper list_routing = Ipv4ListRoutingHelper();
-	OlsrHelper olsr_routing = OlsrHelper();
-	Ipv4StaticRoutingHelper static_routing = Ipv4StaticRoutingHelper();
-	list_routing.Add(static_routing, 0);
-	list_routing.Add(olsr_routing, 10);
-	internet.SetRoutingHelper(list_routing);
-	internet.Install(c);
+	DsrMainHelper dsrMain;
+	DsrHelper dsr;
+	internet.Install (c);
+	dsrMain.Install (dsr, c);
+  
+  
+	// internet.Install(c);
+
 
 	Ipv4AddressHelper address;
 	address.SetBase ("10.0.0.0", "255.0.0.0");
+	//address.SetBase ("10.1.1.0", "255.255.255.0");
 	cIfs = address.Assign (cDevices);
 
 
-	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+// 	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 }
 
 
@@ -282,10 +260,12 @@ void createSocketCallBack(){
 }
 
 void DataToSink(){
+	cout<<"input dataToSink"<<endl;
 	InetSocketAddress remote = InetSocketAddress (cIfs.GetAddress (size-1,0), 8080);
+	cout<<"modify ip"<<endl;
 	//改成把IP地址也发送出去
 	uint32_t t = 0;
-	double interval = 0.0;
+	double interval = 3.0;
 	for (NodeContainer::Iterator i = nodes.Begin(); i != nodes.End();i++) {
 		Ptr<Node> thisNode = *i;
 		Ipv4Address source =GetNodeIpv4Address(thisNode);
@@ -299,28 +279,31 @@ void DataToSink(){
 		std::cout<<TIME_STAMP_FUC<<"Packet sent - "<<"FROM: "<<ipv4Header.GetSource()<<"---num is :"<<packetsSent<<std::endl;
 		Simulator::Schedule (Seconds (interval), &GenerateTraffic, pkt,socket);
 		packetsSent++;
-		interval += 3;
+		interval += 3.0;
 	}
 	if(packetsSent == maxPackets){
 		lifeTime = Simulator::Now().GetSeconds();
 		Simulator::Stop(Seconds(0.0));
 	}
+	cout<<"11111"<<endl;
 	Simulator::Schedule(Seconds(dataInterval), &DataToSink);
+	cout<<"22222"<<endl;
 }
 
 //生成XML文件
 void createXML(){
+	cout<<"create XML"<<endl;
 	if(isSpeed){
 		if(isLifeCycle){
-			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/SPEED/LIFE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/DSR/"+mobilityModel+"/SPEED/LIFE/output.xml");
 		}else{
-			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/SPEED/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/DSR/"+mobilityModel+"/SPEED/output.xml");
 		}
 	}else{
 		if(isLifeCycle){
-			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/DSR/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
 		}else{
-			Panim = new AnimationInterface("/home/wsn/sim_temp/OLSR/"+mobilityModel+"/PACKAGE/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/DSR/"+mobilityModel+"/PACKAGE/output.xml");
 		}
 	}
 	
@@ -342,15 +325,15 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isSpeed){
-			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/LIFE/"<<moveSpeed<<".record";
+			ss << "/home/wsn/sim_temp/DSR/"<<mobilityModel<<"/SPEED/LIFE/"<<moveSpeed<<".record";
 		}else{
-			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/DSR/"<<mobilityModel<<"/PACKAGE/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
 		}
 	}else{
 		if(isSpeed){
-			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/SPEED/"<<moveSpeed<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/DSR/"<<mobilityModel<<"/SPEED/"<<moveSpeed<<"-"+mobilityModel+".record";
 		}else{
-			ss << "/home/wsn/sim_temp/OLSR/"<<mobilityModel<<"/PACKAGE/"<<maxPackets<<"-"+mobilityModel+".record";
+			ss << "/home/wsn/sim_temp/DSR/"<<mobilityModel<<"/PACKAGE/"<<maxPackets<<"-"+mobilityModel+".record";
 		}
 	}
 	
@@ -398,7 +381,7 @@ int main(int argc, char **argv)
 	cmd.Parse(argc, argv);
 
 	LogComponentEnable("Energy", LOG_LEVEL_DEBUG);
- 	LogComponentEnable("olsrScript", LOG_LEVEL_DEBUG);
+ 	LogComponentEnable("dsrScript", LOG_LEVEL_DEBUG);
     simStartRealTime = clock();
 
   //测试实体移动模型
@@ -414,17 +397,20 @@ int main(int argc, char **argv)
 
 	DataToSink();
 	// cout<<"install energy done!"<<endl;
-	Ptr<FlowMonitor> flowMonitor;    
+	cout<<"33333"<<endl;
+	Ptr<FlowMonitor> flowMonitor; 
+cout<<"44444"<<endl;	
 	FlowMonitorHelper flowHelper;    
+	cout<<"55555"<<endl;
 	flowMonitor = flowHelper.InstallAll();
-
+ cout<<"66666"<<endl;
 	
 
 
 
 	Simulator::Stop (Seconds (totalTime));
 	Simulator::Run ();
-
+/*
 	// double delay = 0; 
 	Time delay;    
 	uint32_t num;    
@@ -434,7 +420,7 @@ int main(int argc, char **argv)
 		delay=delay+i->second.delaySum;    //.GetSeconds()
 		num++;
 	}
-
+*/
 
 	// double delay = 0;    
 	// uint32_t num;    
@@ -450,10 +436,11 @@ int main(int argc, char **argv)
 	// 		}
 	// 	}
 	// }
+	/*
 	cout<<"网络时延:"<<delay/num<<endl;//单跳的平均时延  4.19ms
 
 	netDelay = delay/num;
-
+*/
 	Simulator::Destroy ();
 	finalRecord();
 
