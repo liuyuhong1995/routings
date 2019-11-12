@@ -169,7 +169,7 @@ void createNode(){
 	if(moveSpeed.length()>0){
 		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
 	}else{
-		traceFile = "scratch/"+mobilityModel+"/nomadic_speed5.ns_movements";
+		traceFile = "scratch/"+mobilityModel+"/speed30.ns_movements";
 	}
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 	ns2.Install ();

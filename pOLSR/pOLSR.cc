@@ -371,7 +371,7 @@ void UpdateInstSpeed(double interval){
 /*
  * 用于senseNode收到SPT packet之后处理的内联函数
  */
-static inline int32_t ProcessSptPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
+/*static inline int32_t ProcessSptPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 		Ipv4Header h) {
 	double interval = RandomDoubleVauleGenerator(0.0, 0.5);	//产生随机的发包间隔
 	Ipv4Address gateway = h.GetSource();	//gateway Ipv4Address
@@ -388,7 +388,7 @@ static inline int32_t ProcessSptPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 			jump, source);
 	remains.erase(find(remains.begin(),remains.end(),thisNode->GetId()));
 	return 0;
-}
+}*/
 /*
  * 收到packet的回调函数
  */
@@ -480,6 +480,7 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 						if(distance1<distance2){// && (distance2-distance1>60)
 							// cout<<"插入邻居表,源节点为------->"<<id<<"目的节点为------>"<<curId<<endl;
 							graph.addNewEdgeToList(id,distance1,curId);
+							graph.addNewEdgeToList(id,distance1,curId);
 						}
 					}
 					default: {
@@ -559,7 +560,7 @@ void createNode(){
 	if(moveSpeed.length()>0){
 		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
 	}else{
-		traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
+		traceFile = "scratch/"+mobilityModel+"/speed5.ns_movements";
 	}
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 	ns2.Install ()

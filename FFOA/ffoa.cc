@@ -216,49 +216,49 @@ void getDistrib(){
 	}
 }
 
-bool doubleEqual(double x,double y){
+/*bool doubleEqual(double x,double y){
     if(fabs(x-y)<0.0000001)
     	return true;
 	else
 	    return false;
 }
+*/
 
-
-/*void sinkMove(){
+void sinkMove(){
 	for (NodeContainer::Iterator i = sinkNodes.Begin(); i != sinkNodes.End();i++) {
 		Ptr<Node> thisNode = *i;
 		uint32_t id = thisNode->GetId();
 		uint32_t sinkId=id-nNodes;    //sink节点在sinkNodes中的序列
 		Vector location1 = thisNode->GetObject<ConstantPositionMobilityModel>()->GetPosition();
 		Vector newLocation=location1;
-		double moveInterval=2.5/1.414*(sinkId+1)/5;
-		double bound1=25/1.414/5*(sinkId+1);
-		if(doubleEqual(location1.x,bound1)||doubleEqual(location1.x,-bound1)){
-			if(doubleEqual(location1.x,bound1)){
-				if(doubleEqual(location1.y,-bound1))
+		int moveInterval=(sinkId+1)*10;
+		int bound1=100*(sinkId+1);
+		if(location1.x==(500+bound1)||location1.x==(500-bound1)){
+			if(location1.x==(500+bound1)){
+				if(location1.y==(500-bound1))
 					newLocation.x=location1.x-moveInterval;			
                 else
 					newLocation.y=location1.y-moveInterval;
 			}
 			else{
-				if(doubleEqual(location1.y,bound1))
+				if(location1.y==(500+bound1))
 					newLocation.x=location1.x+moveInterval;
                 else
 					newLocation.y=location1.y+moveInterval;
 			}
 		}
 		else{
-			if(doubleEqual(location1.y,bound1))
+			if(location1.y==(500+bound1))
 				newLocation.x=location1.x+moveInterval;
 			else
 				newLocation.x=location1.x-moveInterval;
 		}
 		thisNode->GetObject<ConstantPositionMobilityModel>()->SetPosition(newLocation);
-
+  //    cout<<"sink"<<id<<" location:"<<location1.x<<","<<location1.y<<endl;
 	}
 
 }
-*/
+
 
 //节点id和地址映射
 void buildMapIdAdr(){
@@ -363,7 +363,7 @@ void updateSinkNeigh(){
 void update(){
 
  
- //sinkMove();
+ sinkMove();
     graph.clear();
 	updateDone = false;
     updateSinkNeigh();
@@ -430,7 +430,7 @@ void DataToSink() {
 					gatewayAdr = mapIdAdr[gatewayId];
 					}
 					else{
-						cout<<"send data from sense "<<localId<<" to sense failed"<<endl;
+//						cout<<"send data from sense "<<localId<<" to sense failed"<<endl;
 						continue;	//没有可以发送sense	
 					}										
 			}
@@ -563,17 +563,17 @@ static inline int32_t ProcessSinkDataPacket(Ptr<Node> thisNode, Ptr<Packet> pack
 		if(CheckNodeType(sourceNode,senseNodes,sinkNodes,mobileSinkNode.Get(0))==sense_Type){
 			gatewayId=graph.findBestAttract(localId,sink_Type,sink_Type);
 			if(gatewayId==100){
-				cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
+//				cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
 				return 0;
 			}
 			else{
 				gatewayAdr = mapIdAdr[gatewayId];
-				cout<<"send data from sink "<<localId<<" to sink "<<gatewayId<<endl;
+//				cout<<"send data from sink "<<localId<<" to sink "<<gatewayId<<endl;
 			}
 		}
 		else{
 			gatewayAdr= GetNodeIpv4Address(mobileSinkNode.Get(0));
-			cout<<"send data from sink "<<localId<<" to ms "<<endl;
+//			cout<<"send data from sink "<<localId<<" to ms "<<endl;
 		}
         Simulator::Schedule(Seconds(interval), &TransmitDataPacket, thisNode,localAdr, gatewayAdr);
 	NS_LOG_INFO(TIME_STAMP_FUC<<
@@ -631,12 +631,12 @@ static inline int32_t ProcessDataPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 		else{		
 		   	   uint32_t gatewayId=graph.findBestAttract(localId,sense_Type,sink_Type);
 				if(gatewayId==100){
-					cout<<"send data from sense "<<localId<<" to sink failed"<<endl;
+//					cout<<"send data from sense "<<localId<<" to sink failed"<<endl;
 				return 0;
 				}
 				else{
 					gatewayAdr = mapIdAdr[gatewayId];
-					cout<<"send data from sense "<<localId<<" to sink "<<gatewayId<<endl;
+//					cout<<"send data from sense "<<localId<<" to sink "<<gatewayId<<endl;
 				}
 
 			 }
@@ -986,7 +986,7 @@ void createNode(){
 	// ns2.Install ();
 	sinkNodes.Create(nSinkNodes);
 	//if(!isEntity){
-		std::string traceFile = "scratch/ffoa/roco/speed5.ns_movements";
+		std::string traceFile = "scratch/ffoa/RPGM/ffoa_speed5.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 	//}
@@ -1000,50 +1000,47 @@ void createNode(){
 //移动模型
 void createMobilityModel(){
 	MobilityHelper mobility;
-    mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+  /*  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
                             "X", StringValue ("600"),
                             "Y", StringValue ("600"),
                            "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=100]"));
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 		mobility.Install(senseNodes); 
-		mobility.Install(sinkNodes);
+
+//		mobility.Install(sinkNodes);
 		Ptr<ListPositionAllocator> lpa = CreateObject<ListPositionAllocator>();
 	lpa->Add(Vector(600, 600, 0));
 	mobility.SetPositionAllocator(lpa);
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-		mobility.Install(mobileSinkNode);
-   /* mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                             "X", StringValue ("0"),
-                             "Y", StringValue ("0"),
-                             "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=25]"));
+		mobility.Install(mobileSinkNode);*/
+    mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                             "X", StringValue ("500"),
+                             "Y", StringValue ("500"),
+                             "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=500]"));
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(senseNodes);     //为sense节点安�?�移动模�??
 	Ptr<ListPositionAllocator> lpa = CreateObject<ListPositionAllocator>();
-	lpa->Add(Vector(0, 0, 0));
+	lpa->Add(Vector(500, 500, 0));
 	mobility.SetPositionAllocator(lpa);
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(mobileSinkNode);
 	//UAV移动模型
-	ObjectFactory pos1;
+/*	ObjectFactory pos1;
 		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
 		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=25.0]"));
 		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=25.0]"));
-		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
-   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-                             "X", StringValue ("0"),
-                             "Y", StringValue ("0"),
-                             "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=25]"));
-	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	mobility.Install(sinkNodes);*/
-//	vector <Ptr<ConstantPositionMobilityModel> > cpmm(5);
+		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();*/
 
-	//	for (uint32_t i = 0; i < 5; i++)
-	//		cpmm[i] =sinkNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
-	//	cpmm[0]->SetPosition(Vector(0, 5/1.414, 0));
-	//	cpmm[1]->SetPosition(Vector(10/1.414, 10/1.414, 0));
-	//	cpmm[2]->SetPosition(Vector(-15/1.414, 15/1.414, 0));
-	//	cpmm[3]->SetPosition(Vector(20/1.414, -20/1.414, 0));
-	//	cpmm[4]->SetPosition(Vector(-25/1.414, -25/1.414, 0));
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(sinkNodes);
+	vector <Ptr<ConstantPositionMobilityModel> > cpmm(5);
+		for (uint32_t i = 0; i < 5; i++)
+			cpmm[i] =sinkNodes.Get(i)->GetObject<ConstantPositionMobilityModel>();
+		cpmm[0]->SetPosition(Vector(600, 600, 0));
+		cpmm[1]->SetPosition(Vector(300, 700, 0));
+		cpmm[2]->SetPosition(Vector(800, 200, 0));
+		cpmm[3]->SetPosition(Vector(100, 100, 0));
+		cpmm[4]->SetPosition(Vector(1000, 1000, 0));
    NS_LOG_DEBUG("Create Mobility done!");
 }
 
