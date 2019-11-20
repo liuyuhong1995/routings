@@ -421,6 +421,7 @@ void DataToSink() {
 			//	cout<<TIME_STAMP_FUC<<"datatosink--数据发出,节点id:"<<thisNode->GetId()<<",num is-->"<<send<<endl;
 				if(graph.sense2MS[localId].next){   //可以连接直接到ms，是否直接发送？
 				gatewayAdr = GetNodeIpv4Address(mobileSinkNode.Get(0));
+					cout<<"send data from sense "<<localId<<" to ms "<<endl;
 			}   
 				else{
 					if(graph.sense2Sense[localId].next){  
@@ -564,6 +565,7 @@ static inline int32_t ProcessSinkDataPacket(Ptr<Node> thisNode, Ptr<Packet> pack
 			gatewayId=graph.findBestAttract(localId,sink_Type,sink_Type);
 			if(gatewayId==100){
 //				cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
+				
 				return 0;
 			}
 			else{
@@ -573,7 +575,7 @@ static inline int32_t ProcessSinkDataPacket(Ptr<Node> thisNode, Ptr<Packet> pack
 		}
 		else{
 			gatewayAdr= GetNodeIpv4Address(mobileSinkNode.Get(0));
-//			cout<<"send data from sink "<<localId<<" to ms "<<endl;
+			cout<<"send data from sink "<<localId<<" to ms "<<endl;
 		}
         Simulator::Schedule(Seconds(interval), &TransmitDataPacket, thisNode,localAdr, gatewayAdr);
 	NS_LOG_INFO(TIME_STAMP_FUC<<
@@ -627,11 +629,12 @@ static inline int32_t ProcessDataPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 		double interval = RandomDoubleVauleGenerator(0.0, 0.5);
 		if(graph.sense2MS[localId].next){   //可以连接直接到ms，是否直接发送？		
 		 gatewayAdr = GetNodeIpv4Address(mobileSinkNode.Get(0));
+		 	cout<<"send data from sink "<<localId<<" to ms "<<endl;
 		}   
 		else{		
 		   	   uint32_t gatewayId=graph.findBestAttract(localId,sense_Type,sink_Type);
 				if(gatewayId==100){
-//					cout<<"send data from sense "<<localId<<" to sink failed"<<endl;
+	//				cout<<"send data from sense "<<localId<<" to sink failed"<<endl;
 				return 0;
 				}
 				else{
@@ -710,14 +713,23 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 					}
 						break;
 					case neighbor_Type: {///收到neighbor_Type的packet，将更新邻居表
-					//	if(distance1<senseDistance){
 						uint32_t curId = thisNode->GetId();
 						//发送广�??包的节点
 						Ipv4Address src = h.GetSource();
 						Ptr<Node>node = GetNodePtrFromIpv4Adr(src,senseNodes,sinkNodes,mobileSinkNode);
 						uint32_t id = node->GetId();			
+						Vector location1;
+						Vector location2;
+						location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
+						location2 = node->GetObject<MobilityModel>()->GetPosition();
+						Ptr<Node>msNode = mobileSinkNode.Get(0);
+						Vector location;							
+						location = msNode->GetObject<MobilityModel>()->GetPosition();			 
+						double distance1 = GetdistanOf2Nodes(location1,location);//接收广播包到ms的距离
+						double distance2 = GetdistanOf2Nodes(location2,location);
+						if(distance1 < distance2)
 						graph.addSenseNodeToList(id,getAttract(thisNode,node),curId);                  
-				//		}
+						
 					}
 						break;
 					default: 
