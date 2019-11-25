@@ -13,7 +13,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-
+#include "fis.h"
 #include "math.h"
 #include "time.h"
 #include "stdlib.h"
@@ -55,8 +55,8 @@ void updateNeighborTable();
 void update();
 void setUpdateDoneFlag(bool flag);
 void testPrintNeighbor();//数据传输之前,测试邻居表当前状态
-void UpdateEtx(double interval);
-
+void UpdateLinkStab(double interval);
+double fuzzy_calc(double RR, double DIS, double PR, double MS);
 Time netDelay;
 clock_t lifeTime;
 string mobilityModel="";
@@ -107,26 +107,25 @@ uint32_t nDrain=0;
 double Tgather=0.65;
 //Algorithm
 string algType;
-vector<vector<double> >etx;
+//vector<vector<double> >etx(25,vector<double>());
 double old_x[25];
 double old_y[25];
 double old_z[25];
 double new_z[25];
 double new_x[25];
 double new_y[25];
-
-vector<vector<double> >instSpeed;
-vector<vector<double> >trans;
+AnimationInterface *Panim = 0;
+uint32_t firstDrainedNodeId=0;
+bool firstDrainFlag=true;
+uint32_t firstDrainedSinkId=0;
 vector<vector<double> >recvRatio;
+vector<vector<double> >instSpeed;
+vector<vector<double> >dis;
 //Others
 bool Banim=false;
 bool Brotate=true;//是否启动动态网关
 bool Bdrain=true;
 bool isStatic = true;
-AnimationInterface *Panim = 0;
-uint32_t firstDrainedNodeId=0;
-bool firstDrainFlag=true;
-uint32_t firstDrainedSinkId=0;
 double firstDrainedNodeTime=0;
 string thisSimPath;//simulation path
 string exeName="EXORMain";
@@ -188,7 +187,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 		uint32_t gatewayId = 1024;
 		//根据邻居表获取下一跳的id
 		double distance1 = 0.0;
-		double minWeight = 1024;//设定一个比较大的值.
+		double maxWeight = -1024;//设定一个比较大的值.
 		bool flag = false;
 		for (int i = 0; i < graph.m_vCount; ++i){
 			int curId = graph.m_vVertex[i].id;
@@ -204,10 +203,14 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 				if(!flag)
 						gatewayId = 1024;
 				// double weight = edge->weight;  
-				double weight = etx[curId][edge->id];
-				cout<<curId<<"的下一跳选择： "<< edge->id << "  此时etx为"<<weight<<endl;
-				if(weight < minWeight ){
-					minWeight = weight;
+				double RR=recvRatio[curId][edge->id];
+				double DIS=dis[curId][edge->id];
+				double PR=remaingJ[edge->id]/initialJ;
+				double MS = instSpeed[curId][edge->id];
+				double weight=fuzzy_calc(RR,DIS,PR,MS);
+				cout<<curId<<"的下一跳选择： "<< edge->id << "  此时linkstab为"<<weight<<endl;
+				if(weight > maxWeight ){
+					maxWeight = weight;
 					gatewayId = (uint32_t)edge->id;
 				}
 				edge = edge->next;
@@ -255,7 +258,7 @@ void DataToSink() {
 	// 	Simulator::Schedule(Seconds(0.5), &DataToSink);
 	// 	return;
 	// }
-	 UpdateEtx(dataInterval);
+	UpdateLinkStab(dataInterval);
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();
 			i++) {
 		Ptr<Node> thisNode = *i;
@@ -282,7 +285,9 @@ void DataToSink() {
 		lifeTime = Simulator::Now().GetSeconds();
 		Simulator::Stop(Seconds(5.0));
 	}
+
 	Simulator::Schedule(Seconds(dataInterval), &DataToSink);
+
 }
 /*
  * 用于senseNode收到data_Type的packet后的处理方法
@@ -311,67 +316,115 @@ static inline int32_t ProcessDataPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 }
 
 /*
-*更新并计算链路估计参数Etx
-*输入参数：发包间隔（interval）
+*计算并更新链路稳定性参数（LinkStab)并存到LinkStab数组中
+*输入参数：发包间隔（interval)
 */
-void UpdateEtx(double interval){
+void UpdateLinkStab(double interval){
 	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
-	instSpeed.resize(nNodes,vector<double>(nNodes));
-	trans.resize(nNodes,vector<double>(nNodes));
-	recvRatio.resize(nNodes,vector<double>(nNodes));
-	etx.resize(nNodes,vector<double>(nNodes));
-	//迭代拿到点与点之间各参数的二维矩阵
 		for (NodeContainer::Iterator i = senseNodes.Begin();
 			i != senseNodes.End(); i++) {
 		Ptr<Node> n = *i;
 		// 拿到位置
-		// Ptr<ConstantPositionMobilityModel> srcCpmm = n->GetObject<ConstantPositionMobilityModel>();
 		Vector sourceLocation = n->GetObject<MobilityModel>()->GetPosition();
-		// cout<<"Node"<<n->GetId()<<sourceLocation.x<<endl;
+		cout<<"Node"<<n->GetId()<<sourceLocation.x<<endl;
+		//迭代拿到节点的位置信息，节点间速度，接收率，节点剩余能量信息储存
 			for (NodeContainer::Iterator j = senseNodes.Begin();
 				j != senseNodes.End(); j++) {
 			Ptr<Node> m = *j;
 			// 拿到位置
 			Vector senseLocation = m->GetObject<MobilityModel>()->GetPosition();
-			//计算当前n->node和m->node的距离
+			//两节点当前距离
 			double new_distance=GetdistanOf2Nodes(sourceLocation,senseLocation);
-			//计算两节点之间(n->m)的正向接收成功率
+			//接收率统计
 			if(new_distance<=maxDis){
-			//	recv[m->GetId()][n->GetId()]=recv[m->GetId()][n->GetId()]+1;
-				//double recvRatio=recv[m->GetId()][n->GetId()]/trans[m->GetId()][n->GetId()];
 				recvRatio[m->GetId()][n->GetId()]=0.05+(1-0.05)*recvRatio[m->GetId()][n->GetId()];
 			}
 			else{
 				recvRatio[m->GetId()][n->GetId()]=(1-0.05)*recvRatio[m->GetId()][n->GetId()];
 			}
-			//从矩阵中拿到上一次发包时两节点的距离
+			//从存储的vector中拿到上一次发包时两节点的位置信息
 			Vector old_location1;
 			Vector old_location2;
 			old_location1.x=old_x[m->GetId()];
 			old_location1.y=old_y[m->GetId()];
 			old_location1.z=old_z[m->GetId()];
+			old_location2.z=old_z[n->GetId()];
 			old_location2.x=old_x[n->GetId()];
 			old_location2.y=old_y[n->GetId()];
-			old_location2.z=old_z[m->GetId()];
+			//计算距离
 			double old_distance=GetdistanOf2Nodes(old_location2,old_location1);
-			//cout<<"z"<<old_location2.z<<"  "<<old_location2.x<<"  "<<old_location2.y<<"     "<<old_location1.z<<"   "<<old_location1.x<<"   "<<old_location1.y<<"   "<<old_distance<<endl;
-			//计算节点间相对速度
+			//两节点相对速度
 			double speed=(new_distance-old_distance)/interval;
-			instSpeed[m->GetId()][n->GetId()]=0.04*speed+(1-0.04)*instSpeed[m->GetId()][n->GetId()];
-			//计算Etx值
-			etx[m->GetId()][n->GetId()]=(exp(instSpeed[m->GetId()][n->GetId()]*0.2))/(recvRatio[m->GetId()][n->GetId()]*recvRatio[n->GetId()][m->GetId()]);
-			//更新位置矩阵
-			old_x[m->GetId()]=new_x[m->GetId()];
-			old_y[m->GetId()]=new_y[m->GetId()];
-			old_z[m->GetId()]=new_z[m->GetId()];
-		    new_x[m->GetId()]=senseLocation.x;
-			new_y[m->GetId()]=senseLocation.y;
-			new_z[m->GetId()]=senseLocation.z;
-			//cout<<"Node("<<m->GetId()<<n->GetId()<<")   Node的x："<<senseLocation.x<<"Node的y："<<senseLocation.y<<"instSpeed:"<<instSpeed[m->GetId()][n->GetId()]<<"new"<<new_distance<<"old"<<old_distance<<"r"<<recvRatio[m->GetId()][n->GetId()]<<"etx"<<etx[m->GetId()][n->GetId()]<<endl;
+			//速度归一化
+			instSpeed[m->GetId()][n->GetId()]=((speed/20)/interval+0.99)/2;	
+			cout<<"速度"<<instSpeed[m->GetId()][n->GetId()]<<"  "<<interval<<endl;
+			double DIS=new_distance/225;
+			if(DIS > 1.0 )
+				DIS=1.0;
+			dis[m->GetId()][n->GetId()]=DIS;
+			old_x[n->GetId()]=new_x[n->GetId()];
+			old_y[n->GetId()]=new_y[n->GetId()];
+			old_z[n->GetId()]=new_z[n->GetId()];
+			new_z[n->GetId()]=senseLocation.z;
+			new_x[n->GetId()]=senseLocation.x;
+			new_y[n->GetId()]=senseLocation.y;
+			// cout<<"Node("<<m->GetId()<<n->GetId()<<")"<<RR<<"  "<<DIS<<"  "<<PR<<"  "<<speed1<<"  "<<linkStab[m->GetId()][n->GetId()]<<endl;
 			} 
 	} 
+	//Simulator::Schedule(Seconds(5.0),&UpdateInstSpeed,5.0);
 }
+/*
+*mamdani模糊逻辑计算
+*输入参数：节点间接收成功率(RR),两节点间距离(DIS)，
+*		   节点当前剩余能量(PR),节点活跃程度(MS)。
+*返回值：解模糊化后结果(result)作为链路稳定性参数。
+*/
+double fuzzy_calc(double RR, double DIS, double PR, double MS)
+{
+	FIS *fis;
+	double **fisMatrix, **outputMatrix;
+	//int data_row_n = 1;
+	//int data_col_n = 4;
+	//int i, j = 0;
+	int i;
+	int debug = 1;
+	double **dataMatrix;
+	string ss="/home/wsn/ns3/ns-allinone-3.26/ns-3.26/scratch/FRRP/LinkStab.fis";
+	const char *fis_file = ss.c_str();
+	int fis_row_n, fis_col_n;
+	//dataMatrix = returnDataMatrix(data_file, &data_row_n, &data_col_n);
+	dataMatrix = returnDataVector(&RR, &DIS, &PR, &MS);
+	fisMatrix = returnFismatrix(fis_file, &fis_row_n, &fis_col_n);
+	fis = (FIS *)fisCalloc(1, sizeof(FIS));
+	fisBuildFisNode(fis, fisMatrix, fis_col_n, MF_POINT_N);
 
+	if (4 < fis->in_n) {
+		printf("Given FIS is a %d-input %d-output system.\n",
+			fis->in_n, fis->out_n);
+		printf("Given data file does not have enough input entries.\n");
+		//fisFreeMatrix((void **)dataMatrix, data_row_n);
+		fisFreeMatrix((void **)dataMatrix, 1);
+		fisFreeMatrix((void **)fisMatrix, fis_row_n);
+		fisFreeFisNode(fis);
+		//fisError("Exiting ...");
+	}
+
+	if (debug)
+		fisPrintData(fis);
+
+	outputMatrix = (double **)fisCreateMatrix(1, fis->out_n, sizeof(double));
+
+	for (i = 0; i < 1; i++)
+		getFisOutput(dataMatrix[i], fis, outputMatrix[i]);
+
+	double result = outputMatrix[0][0];
+	fisFreeFisNode(fis);
+	fisFreeMatrix((void **)dataMatrix, 1);
+	fisFreeMatrix((void **)fisMatrix, fis_row_n);
+	fisFreeMatrix((void **)outputMatrix, 1);
+
+	return result;
+}
 
 /*
  * 用于senseNode收到SPT packet之后处理的内联函数
@@ -485,7 +538,6 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 						if(distance1<distance2){// && (distance2-distance1>60)
 							// cout<<"插入邻居表,源节点为------->"<<id<<"目的节点为------>"<<curId<<endl;
 							graph.addNewEdgeToList(id,distance1,curId);
-							graph.addNewEdgeToList(id,distance1,curId);
 						}
 					}
 					default: {
@@ -565,12 +617,10 @@ void createNode(){
 	if(moveSpeed.length()>0){
 		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
 	}else{
-		traceFile = "scratch/"+mobilityModel+"/test2.ns_movements";
+		traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
 	}
 	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-	ns2.Install ()
-	
-	;
+	ns2.Install ();
 	mobileSinkNode.Create(1);
 	NS_LOG_DEBUG("Create nodes done!");
 }
@@ -781,7 +831,7 @@ void finalRecord(){
 }
 
 double GetdistanOf2Nodes(Vector one,Vector two) {
-	return std::pow((one.x - two.x)*(one.x - two.x) + (one.y - two.y)*(one.y - two.y)+(one.z - two.z)*(one.z - two.z),1.0/2);
+	return std::sqrt((one.x - two.x)*(one.x - two.x) + (one.y - two.y)*(one.y - two.y)+(one.z - two.z)*(one.z - two.z));
 }
 
 
@@ -862,6 +912,9 @@ void initial(){
 	}
 	graph.m_vCount = nNodes;
 	graph.makeVertexArray();
+	recvRatio.resize(nNodes,vector<double>(nNodes));
+	dis.resize(nNodes,vector<double>(nNodes));
+	instSpeed.resize(nNodes,vector<double>(nNodes));
 	cout<<"neighbor struct initial done!!"<<endl;
 }
 
@@ -931,7 +984,7 @@ double GetdistanFromMSink(Ptr<Node> srcN) {
 	Ptr<Node>msNode = mobileSinkNode.Get(0);
 	Ptr<MobilityModel> remCpmm = msNode->GetObject<MobilityModel>();
 	Vector remP = remCpmm->GetPosition();
-	return std::sqrt((srcP.x - remP.x)*(srcP.x - remP.x) + (srcP.y - remP.y)*(srcP.y - remP.y)+(srcP.z - remP.z)*(srcP.z - remP.z));
+	return std::sqrt((srcP.x - remP.x)*(srcP.x - remP.x) + (srcP.y - remP.y)*(srcP.y - remP.y)+ (srcP.z - remP.z)*(srcP.z - remP.z));
 }
 
 void setUpdateDoneFlag(bool flag){
@@ -1019,7 +1072,8 @@ int main(int argc, char* argv[]) {
 	// Simulator::Schedule(Seconds(5.0),&DataToSink);
 	//从路由发现到数据传输 结束
 	//测试周期性邻居交换信息
-	Simulator::Schedule(Seconds(0.1),&update);   
+	Simulator::Schedule(Seconds(0.1),&update); 
+		//UpdateInstSpeed(5.0);
 	Simulator::Schedule(Seconds(buildNeighborDone),&DataToSink);
 	//Simulator::Schedule(Seconds(6.0),&testPrintNeighbor); 
 	//测试结束
