@@ -58,7 +58,7 @@ void findRoutes(int id);
 void buildRoutes();
 void update();
 void setUpdateDoneFlag(bool flag);
-void testPrintNeighbor();//数据传输之前,测试邻居表当前状�??
+void testPrintNeighbor();//数据传输之前,测试邻居表当前状�???
 uint32_t findMinDistanceRelay(Ptr<Node> local);
 double GetdistanFromRelay(Ptr<Node> srcN,uint32_t num);
 void testIP();
@@ -75,24 +75,24 @@ bool isEntity;
 map<int,vector<vector<int>>>routePaths;
 map<uint32_t,uint32_t>nodeRobotMap;
 Time netDelay;
-/*�??调参�??*/
+/*�???调参�???*/
 double robotSpeed = 80;
 double dataInterval = 8.0; //发包间隔
-double maxDis =225.0 ;      //最大通信距�??,要考虑区域面积和部署相关问�??
-double buildNeighborDone = 2.0;//新建立邻居表结束时间
+double maxDis =225.0 ;      //最大通信距�??,要考虑区域面积和部署相关问�???
+double buildNeighborDone = 2.5;//新建立邻居表结束时间
 
 double updateInterval = 8.0;//每隔多久更新一次邻居表
 uint32_t nNodes = 20;
 int node_num = (int)nNodes+1;
 uint32_t nSinkNodes = 5;
 // double neighborFindDone = 2.0;//当前节点建立邻居表的时间
-double weakless = 0;//小�?�模实时更新,解决长链�??和弱链路的问�??.
+double weakless = 0;//小�?�模实时更新,解决长链�???和弱链路的问�???.
 
 uint16_t relaySend = 0;
 int maxPackets = 1000;
 int send = 0;
 /*
- * 定义UdpSocketFactory为socket的类型和socket的广�??地址
+ * 定义UdpSocketFactory为socket的类型和socket的广�???地址
  */
 TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
 InetSocketAddress broadcastAdr = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
@@ -114,9 +114,9 @@ double maxY;
 double mSinkTraceY;
 bool gridTest=true;
 //Data packet
-uint32_t pktSize = 1500;//1000字节  9�??节点 包含6个sense�??3个sink，一共发10�?? 9*10*1000=90000,一�??�??90000.
+uint32_t pktSize = 1500;//1000字节  9�???节点 包含6个sense�???3个sink，一共发10�??? 9*10*1000=90000,一�???�???90000.
 double totalBytesGenerated;
-double initialJ = 5.0;
+double initialJ = 150.0;
 double totalConsumed=0;
 uint32_t energyTraceIndex=0;//The global id of node to trace energy, default 0 means no trace
 double TxPara=0.000006;//0.000006J/Bytes for Tx
@@ -127,7 +127,7 @@ double Tgather=0.65;
 string algType;
 //Others
 bool Banim=true;
-bool Brotate=true;//�??否启动动态网�??
+bool Brotate=true;//�???否启动动态网�???
 bool Bdrain=true;
 bool isStatic = true;
 AnimationInterface *Panim = 0;
@@ -137,7 +137,7 @@ uint32_t firstDrainedSinkId=0;
 double firstDrainedNodeTime=0;
 string thisSimPath;//simulation path
 string exeName="FFOA";
-string simFolderName="/home/wsn/jgy/sim_temp/";
+string simFolderName="/home/wsn/sim_temp/FFOA/";
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
 double networkLifetime;
@@ -179,18 +179,17 @@ static bool updateDone = false;
 //存普通节点ip和�?�应的ip地址容器
 map<uint32_t,Ipv4Address>mapIdAdr;
 
-map<uint32_t,bool>robotState;//false  �??由�?,�??�??继状�??.
+map<uint32_t,bool>robotState;//false  �???由�?,�???�???继状�???.
 
 void getDistrib();
 double getMeanEnergy(nodeType nType);
 bool isSatisfied(Ptr<Node>thisNode,Ptr<Node>anotherNode);
-double getAttract(Ptr<Node>thisNode,Ptr<Node>sourceNode);
-double getPoissonDistrib(uint32_t r);
+void setAttract();
+uint32_t getConnect(Ptr<Node>thisNode,nodeType nType_1,nodeType nType_2);
 
 
-double Dr=1;  //UAV能量的消耗速率
-double p=0.2;  //平均�??径损�??
-double r=0.3;   //感知节点平均射程
+double p=4;  //平均�?径损�?
+double r=10;   //感知节点平均射程
 double e=1.7;   //
 uint32_t segementNum=5;
 //double senseDistance=15.0;
@@ -210,7 +209,7 @@ void getDistrib(){
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();i++) {
 		Ptr<Node> thisNode = *i;
 		location_2 = thisNode->GetObject<MobilityModel>()->GetPosition(); 
-		distance_1 = GetdistanOf2Nodes(location_1,location_2);//sense到ms的距离
+		distance_1 = GetdistanOf2Nodes(location_1,location_2);//sense到ms的距�?
 		int quotient=distance_1/(1000/segementNum);
 		distrib[quotient].push_back(thisNode->GetId());
 	}
@@ -228,10 +227,10 @@ void sinkMove(){
 	for (NodeContainer::Iterator i = sinkNodes.Begin(); i != sinkNodes.End();i++) {
 		Ptr<Node> thisNode = *i;
 		uint32_t id = thisNode->GetId();
-		uint32_t sinkId=id-nNodes;    //sink节点在sinkNodes中的序列
-		Vector location1 = thisNode->GetObject<ConstantPositionMobilityModel>()->GetPosition();
+		uint32_t sinkId=id-nNodes;    //sink节点在sinkNodes�?的序�?
+		Vector location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
 		Vector newLocation=location1;
-		int moveInterval=(sinkId+1)*10;
+		int moveInterval=(sinkId+1)*20;
 		int bound1=100*(sinkId+1);
 		if(location1.x==(500+bound1)||location1.x==(500-bound1)){
 			if(location1.x==(500+bound1)){
@@ -253,7 +252,7 @@ void sinkMove(){
 			else
 				newLocation.x=location1.x-moveInterval;
 		}
-		thisNode->GetObject<ConstantPositionMobilityModel>()->SetPosition(newLocation);
+		thisNode->GetObject<MobilityModel>()->SetPosition(newLocation);
   //    cout<<"sink"<<id<<" location:"<<location1.x<<","<<location1.y<<endl;
 	}
 
@@ -284,7 +283,7 @@ void buildMapIdAdr(){
 		mapIdAdr.insert(pairNode1);
 	}
 
-	//插入�??的地
+	//插入�???的地
 	Ptr<Node>msNode = mobileSinkNode.Get(0);
 	mapIdAdr.insert(pair<uint32_t,Ipv4Address>(msNode->GetId(),GetNodeIpv4Address(msNode)));
 	//ceshi
@@ -312,21 +311,21 @@ void initial(){
 }
 
 void testIP(){
-	cout<<"senseNodes �?? ip地址如下"<<endl;
+	cout<<"senseNodes �??? ip地址如下"<<endl;
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();
 		i++) {
 			Ptr<Node> thisNode = *i;
 			Ipv4Address iv = GetNodeIpv4Address(thisNode);
 			cout<<thisNode->GetId()<<"---"<<iv<<endl;
 	}
-	cout<<"sinkNodes �?? ip地址如下"<<endl;
+	cout<<"sinkNodes �??? ip地址如下"<<endl;
 	for (NodeContainer::Iterator i = sinkNodes.Begin(); i != sinkNodes.End();
 		i++) {
 			Ptr<Node> thisNode = *i;
 			Ipv4Address iv = GetNodeIpv4Address(thisNode);
 			cout<<thisNode->GetId()<<"---"<<iv<<endl;
 	}
-	cout<<"接收�?? �?? ip地址如下"<<endl;
+	cout<<"接收�??? �??? ip地址如下"<<endl;
 	Ipv4Address iv1 = GetNodeIpv4Address(mobileSinkNode.Get(0));
 	cout<<mobileSinkNode.Get(0)->GetId()<<"---"<<iv1<<endl;
 	// Simulator::Schedule(Seconds(30.0),&testIP);  
@@ -334,39 +333,12 @@ void testIP(){
 }
 
 
-void updateSinkNeigh(){
-    for (NodeContainer::Iterator i = sinkNodes.Begin(); i != sinkNodes.End();i++) {
-		Ptr<Node> thisNode = *i;
-		 for (NodeContainer::Iterator j = sinkNodes.Begin(); j != sinkNodes.End();j++){
-			 Ptr<Node> otherNode = *j;		 
-                if(thisNode!=otherNode){
-				   	Vector location2=otherNode->GetObject<MobilityModel>()->GetPosition();
-					Vector location1=thisNode->GetObject<MobilityModel>()->GetPosition();
-					double distance1=GetdistanOf2Nodes(location2,location1);
-					if(distance1<maxDis){
-						uint32_t curId = thisNode->GetId();
-						uint32_t id = otherNode->GetId();
-						graph.addSinkSinkToList(curId,getAttract(thisNode,otherNode),id);
-					}
-				}
-		 }
-	}
-
-}
-
-
-
-
-
-
 
 void update(){
 
- 
- sinkMove();
+ 	sinkMove();
     graph.clear();
 	updateDone = false;
-    updateSinkNeigh();
 	updateNeighbor();
 	Simulator::Schedule(Seconds(buildNeighborDone), &setUpdateDoneFlag,true);
 	Simulator::Schedule(Seconds(updateInterval), &update);
@@ -374,22 +346,26 @@ void update(){
 
 
 void updateNeighbor(){
-	double interval = 0;	//产生随机的发包间�??
-	//graph.print();
-
+	double interval = 0;	//产生随机的发包间�???
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();i++) {
 		Ptr<Node> thisNode = *i;
 		Ipv4Address srcAdr = GetNodeIpv4Address(thisNode);
 		Simulator::Schedule(Seconds(interval), &startRoute,thisNode,srcAdr);
-		// cout<<"从一�??节点开始广�??发现�??由："<<thisNode->GetId()<<endl;
+		// cout<<"从一�???节点开始广�???发现�???由："<<thisNode->GetId()<<endl;
+		interval += 0.1;
+	}
+	for (NodeContainer::Iterator i = sinkNodes.Begin(); i != sinkNodes.End();i++) {
+		Ptr<Node> thisNode = *i;
+		Ipv4Address srcAdr = GetNodeIpv4Address(thisNode);
+		Simulator::Schedule(Seconds(interval), &startRoute,thisNode,srcAdr);
+		// cout<<"从一�???节点开始广�???发现�???由："<<thisNode->GetId()<<endl;
 		interval += 0.1;
 	}
 }
 
-/*一�??节点邻居发现的开�??*/
+/*一�???节点邻居发现的开�???*/
 void startRoute(Ptr<Node>thisNode,Ipv4Address srcAdr){
 	Ptr<Packet> pkt = Create<Packet>(pktSize);
-
 	Ipv4Header ipv4Header;
 	pktType pktType=neighbor_Type;
 	ipv4Header.SetSource(srcAdr);
@@ -397,17 +373,18 @@ void startRoute(Ptr<Node>thisNode,Ipv4Address srcAdr){
 	pkt->AddHeader(ipv4Header);
 	Ptr<Socket> source = Socket::CreateSocket(thisNode, tid);
 	source->Connect(broadcastAdr);
-	source->SetAllowBroadcast(true);	//socket发送广�??必须有这么一�??设置
+	source->SetAllowBroadcast(true);	//socket发送广�???必须有这么一�???设置
 	source->Send(pkt);
-	// cout<<"测试一�??节点的广�??�??"<<thisNode->GetId()<<endl;
+	// cout<<"测试一�???节点的广�???�???"<<thisNode->GetId()<<endl;
 }
 
 /*
- * 全体senseNodes将按一定的数据生成率向senseNodes发送感知到的数据
+ * 全体senseNodes将按一定的数据生成率向senseNodes发送感知到的数�?
  */
 void DataToSink() {
-//	if(updateDone){
-	double interval = 0;	//产生随机的发包间隔
+	setAttract();
+	//graph.print();
+	double interval = 0;	//产生随机的发包间�?
 	uint32_t gatewayId;
 	Ipv4Address gatewayAdr;
 	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();
@@ -418,21 +395,26 @@ void DataToSink() {
 			if (!CheckRemainingJ(thisNode)) {
 				continue;
 			} else {
+				Ptr<Node>msNode = mobileSinkNode.Get(0);
+		 		Vector location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
+				Vector location2 = msNode->GetObject<MobilityModel>()->GetPosition();
+				double distance1=GetdistanOf2Nodes(location2,location1);
 			//	cout<<TIME_STAMP_FUC<<"datatosink--数据发出,节点id:"<<thisNode->GetId()<<",num is-->"<<send<<endl;
-				if(graph.sense2MS[localId].next){   //可以连接直接到ms，是否直接发送？
-				gatewayAdr = GetNodeIpv4Address(mobileSinkNode.Get(0));
+				if(distance1<maxDis){   //�?以连接直接到ms，是否直接发送？
+				gatewayAdr = GetNodeIpv4Address(msNode);
 					cout<<"send data from sense "<<localId<<" to ms "<<endl;
-			}   
-				else{
+				}   
+				else
 					if(graph.sense2Sense[localId].next){  
 			//		getDistrib();
 			//		uint32_t segement_1=findSegement(thisNode);                        
                     gatewayId=graph.findBestAttract(localId,sense_Type,sense_Type);
 					gatewayAdr = mapIdAdr[gatewayId];
+					cout<<"send data from sense "<<localId<<" to sense "<<gatewayId<<endl;
 					}
 					else{
-//						cout<<"send data from sense "<<localId<<" to sense failed"<<endl;
-						continue;	//没有可以发送sense	
+						cout<<"send data from sense "<<localId<<" to sense failed"<<endl;
+						continue;	//没有�?以发送sense	
 					}										
 			}
 				Simulator::Schedule(Seconds(interval), &TransmitDataPacket,
@@ -440,13 +422,12 @@ void DataToSink() {
 				send++;
 				interval += 3;
 				totalBytesGenerated += pktSize;
-			}
+		
 	}
 	if(send == maxPackets){
 		lifeTime = Simulator::Now().GetSeconds();
 		Simulator::Stop(Seconds(5.0));
 	}
-//	}
 	Simulator::Schedule(Seconds(dataInterval), &DataToSink);
 }
 
@@ -454,7 +435,7 @@ void DataToSink() {
 
 
 /*
- *发送数�??到下一跳网�??
+ *发送数�???到下一跳网�???
  */
 void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address gatewayAdr) {
 	NS_LOG_LOGIC(
@@ -465,7 +446,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address g
 	if (CheckRemainingJ(localNode)){
 		Ipv4Address localAdr = GetNodeIpv4Address(localNode);
 		pktType pktType = data_Type;
-		//通过传过来的�??由表获取
+		//通过传过来的�???由表获取
 		NS_LOG_LOGIC(
 				TIME_STAMP_FUC<<"localAdr = "<<localAdr<<", gatewayAdr = "<<gatewayAdr);
 		Ptr<Packet> dataPkt = Create<Packet>(pktSize);
@@ -490,9 +471,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address g
 }
 
 
-double getPoissonDistrib(uint32_t r){//�??�??向量，怎么表示�??
-	return 1.0;
-}
+
 
 double getMeanEnergy(nodeType nType){
 	double totalEnergy;
@@ -518,31 +497,71 @@ double GetdistanOf2Nodes(Vector one,Vector two) {
 	return std::sqrt((one.x - two.x)*(one.x - two.x) + (one.y - two.y)*(one.y - two.y));
 }
 
-double getAttract(Ptr<Node>thisNode,Ptr<Node>sourceNode){
-	uint32_t thisId=thisNode->GetId();
-/*	Vector location1;
-	Vector location2;
-	location1 = sourceNode->GetObject<MobilityModel>()->GetPosition();
-	location2 = thisNode->GetObject<MobilityModel>()->GetPosition();
-	nodeType nType_1;	
-	nodeType nType_2;
-	nType_1 = CheckNodeType(thisNode,senseNodes,sinkNodes,mobileSinkNode.Get(0));
-	nType_2 = CheckNodeType(sourceNode,senseNodes,sinkNodes,mobileSinkNode.Get(0));
-	double Pr=0.0;
-	if(nType_1==sink_Type){
-		if(nType_2==sink_Type)
-			Pr=getPoissonDistrib(nNodes);
-		else
-			Pr=getPoissonDistrib(nNodes+nSinkNodes);
-		return (remaingJ[thisId]+initialJ*(pow(e,(-Dr*p*p)))*(GetdistanOf2Nodes(location1,location2))+Pr);
+uint32_t getConnect(uint32_t id,nodeType nType){
+	uint32_t connectNum=0;
+	if(nType==sense_Type){
+		if (graph.sense2Sense[id].next){
+			Node1* tmp =graph.sense2Sense[id].next;
+			connectNum++;
+			while(tmp->next){
+				tmp = tmp->next;
+				connectNum++;
+			}
+		}
+		if (graph.sense2Sink[id].next){
+			Node1* tmp=graph.sense2Sink[id].next;
+			connectNum++;
+			while(tmp->next){
+				tmp = tmp->next;
+				connectNum++;
+			}
+		}
 	}
 	else{
-		Pr=getPoissonDistrib(nSinkNodes);
-		return (remaingJ[thisId]+initialJ*(pow(e,(-Dr*p*p)))*(GetdistanOf2Nodes(location2,location1))+Pr);
+		if (graph.sink2Sink[id].next){
+			Node1* tmp = graph.sink2Sink[id].next;
+			connectNum++;
+			while(tmp->next){
+				tmp = tmp->next;
+				connectNum++;
+			}
+		}
+	}			
+	return connectNum;
+}
 
-	}*/
-	return (remaingJ[thisId]/initialJ);
-	
+
+void setAttract(){
+	double Dr;
+	uint32_t connectivity;
+	Node1* tmp;
+	for(uint32_t i = 0; i < nNodes; ++i) {
+		 tmp = graph.sense2Sense[i].next;
+		while(tmp){
+			connectivity=getConnect(tmp->id,sense_Type);
+			Dr=pow(e,(-nNodes*connectivity));
+			tmp->Attract=initialJ*(pow(e,(-Dr*r*r)));
+			tmp = tmp->next;
+		}
+	}
+	for(uint32_t i = 0; i < nNodes; ++i) {
+		tmp = graph.sense2Sink[i].next;
+		while(tmp){
+			connectivity=getConnect((tmp->id)-nNodes,sink_Type);
+			Dr=pow(e,(-nNodes*connectivity));
+			tmp->Attract=initialJ*(pow(e,(-Dr*p*p)));
+			tmp = tmp->next;
+		}
+	}
+	for(uint32_t i = 0; i < nSinkNodes; ++i){
+		Node1* tmp = graph.sink2Sink[i].next;
+		while(tmp){
+			connectivity=getConnect((tmp->id)-nNodes,sink_Type);
+			Dr=pow(e,(-nNodes*connectivity));
+			tmp->Attract=initialJ*(pow(e,(-Dr*p*p)));
+			tmp = tmp->next;
+		}
+	}
 }
 
 //sink到sink
@@ -552,32 +571,40 @@ static inline int32_t ProcessSinkDataPacket(Ptr<Node> thisNode, Ptr<Packet> pack
 	Ipv4Address srcAdr = h.GetSource();
 	Ipv4Address dstAdr =h.GetDestination();
 	Ptr<Node>sourceNode = GetNodePtrFromIpv4Adr(srcAdr,senseNodes,sinkNodes,mobileSinkNode);
-	Ipv4Address localAdr = GetNodeIpv4Address(thisNode);
 	uint32_t gatewayId;
 	Ipv4Address gatewayAdr;
-		uint32_t localId =  thisNode->GetId();
-		//产生随机的发包间
-		NS_LOG_LOGIC(TIME_STAMP_FUC<<
-					GetNodeIpv4Address(thisNode)<<" received a data packet from "
-					<<h.GetSource()<<" to "<<h.GetDestination()<<srcAdr<<"to"<<dstAdr);
-		double interval = RandomDoubleVauleGenerator(0.0, 0.5);
-		if(CheckNodeType(sourceNode,senseNodes,sinkNodes,mobileSinkNode.Get(0))==sense_Type){
+	uint32_t localId =  thisNode->GetId();
+	//产生随机的发包间
+	NS_LOG_LOGIC(TIME_STAMP_FUC<<
+				GetNodeIpv4Address(thisNode)<<" received a data packet from "
+				<<h.GetSource()<<" to "<<h.GetDestination()<<srcAdr<<"to"<<dstAdr);
+	double interval = RandomDoubleVauleGenerator(0.0, 0.5);
+	Ptr<Node>msNode = mobileSinkNode.Get(0);
+	Vector location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
+	Vector location2 = msNode->GetObject<MobilityModel>()->GetPosition();
+	double distance1=GetdistanOf2Nodes(location2,location1);
+	if(distance1<maxDis){   //�?以连接直接到ms，是否直接发送？
+	gatewayAdr = GetNodeIpv4Address(msNode);
+	cout<<"send data from sink "<<localId<<" to ms "<<endl;
+	}   
+	else{
+		if(graph.sink2Sink[localId].next){
 			gatewayId=graph.findBestAttract(localId,sink_Type,sink_Type);
 			if(gatewayId==100){
-//				cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
-				
+			cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
 				return 0;
 			}
 			else{
 				gatewayAdr = mapIdAdr[gatewayId];
-//				cout<<"send data from sink "<<localId<<" to sink "<<gatewayId<<endl;
+				cout<<"send data from sink "<<localId<<" to sink "<<gatewayId<<endl;
 			}
 		}
 		else{
-			gatewayAdr= GetNodeIpv4Address(mobileSinkNode.Get(0));
-			cout<<"send data from sink "<<localId<<" to ms "<<endl;
+			return 0;
 		}
-        Simulator::Schedule(Seconds(interval), &TransmitDataPacket, thisNode,localAdr, gatewayAdr);
+		
+	}
+    Simulator::Schedule(Seconds(interval), &TransmitDataPacket, thisNode,srcAdr, gatewayAdr);
 	NS_LOG_INFO(TIME_STAMP_FUC<<
 						GetNodeIpv4Address(thisNode)<<"(sink) received a data packet from "
 						<<h.GetSource());
@@ -602,8 +629,8 @@ uint32_t findSegement(Ptr<Node>thisNode){
 
 
 //bool isSatisfied(Ptr<Node>thisNode,Ptr<Node>anotherNode){   
-	//条件�??9）实现？
-//	uint32_t segement_1=findSegement(thisNode);//条件�??15）实现？
+	//条件9
+//	uint32_t segement_1=findSegement(thisNode);//条件15�?
 //	uint32_t segement_2=findSegement(anotherNode);
 //	return true;
 //	for(vector<int>::iterator it1=distrib[segement_1].begin();it1!=distrib[segement_1].end(); ++it1){
@@ -612,42 +639,45 @@ uint32_t findSegement(Ptr<Node>thisNode){
 
 //}
 
-//sense中继到sink
+//sense�?继到sink
 static inline int32_t ProcessDataPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 		Ipv4Header h){
 	//分析包的source和destination
-	Ipv4Address srcAdr = h.GetSource();
-	Ipv4Address localAdr = GetNodeIpv4Address(thisNode);
+	Ipv4Address srcAdr = h.GetSource();;
 	Ipv4Address dstAdr =h.GetDestination();
 	Ipv4Address gatewayAdr;
 	uint32_t localId=thisNode->GetId();
-	if (localAdr != dstAdr) {//gateway node received the packet, transmit it to the next gateway node
-		//产生随机的发包间�??
+		//产生随机的发包间�???
 		NS_LOG_LOGIC(TIME_STAMP_FUC<<
 					GetNodeIpv4Address(thisNode)<<" received a data packet from "
 					<<h.GetSource()<<" to "<<h.GetDestination()<<srcAdr<<"to"<<dstAdr);
 		double interval = RandomDoubleVauleGenerator(0.0, 0.5);
-		if(graph.sense2MS[localId].next){   //可以连接直接到ms，是否直接发送？		
-		 gatewayAdr = GetNodeIpv4Address(mobileSinkNode.Get(0));
-		 	cout<<"send data from sink "<<localId<<" to ms "<<endl;
-		}   
-		else{		
-		   	   uint32_t gatewayId=graph.findBestAttract(localId,sense_Type,sink_Type);
+		Ptr<Node>msNode = mobileSinkNode.Get(0);
+		Vector location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
+		Vector location2 = msNode->GetObject<MobilityModel>()->GetPosition();
+		double distance1=GetdistanOf2Nodes(location2,location1);
+		if(distance1<maxDis){   //�?以连接直接到ms，是否直接发送？
+		gatewayAdr = GetNodeIpv4Address(msNode);
+		cout<<"send data from sink "<<localId<<" to ms "<<endl;
+		}    
+		else{
+			if(graph.sense2Sink[localId].next){
+				uint32_t gatewayId=graph.findBestAttract(localId,sense_Type,sink_Type);
 				if(gatewayId==100){
-	//				cout<<"send data from sense "<<localId<<" to sink failed"<<endl;
-				return 0;
+					cout<<"send data from sink "<<localId<<" to sink failed"<<endl;
+					return 0;
 				}
 				else{
 					gatewayAdr = mapIdAdr[gatewayId];
-//					cout<<"send data from sense "<<localId<<" to sink "<<gatewayId<<endl;
+					cout<<"send data from sink "<<localId<<" to sink "<<gatewayId<<endl;
 				}
-
-			 }
-
+			}
+			else{
+				return 0;
+			}
+			
+		}
 		Simulator::Schedule(Seconds(interval), &TransmitDataPacket, thisNode,srcAdr, gatewayAdr);
-
-	}
-
 	NS_LOG_INFO(TIME_STAMP_FUC<<
 						GetNodeIpv4Address(thisNode)<<"(sink) received a data packet from "
 						<<h.GetSource());
@@ -658,7 +688,7 @@ static inline int32_t ProcessDataPacket(Ptr<Node> thisNode, Ptr<Packet> packet,
 
 
 void RecvPacketCallback(Ptr<Socket> socket) {
-	// cout<<"进入回调-------------------"<<endl;
+	 //cout<<"进入回调-------------------"<<endl;
 	Ptr<Packet> pkt;
 	Address from;
 	while ((pkt = socket->RecvFrom(from))) {
@@ -666,7 +696,7 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 		nodeType nType;
 		pktType pType;
 		if (packet->GetSize() > 0) {
-			Ptr<Node> thisNode = socket->GetNode();	//这里这个socket是received socket，不�??发送的那个
+			Ptr<Node> thisNode = socket->GetNode();	//这里这个socket是received socket，不�???发送的那个
 			Ipv4Header h;
 			packet->PeekHeader(h);
 			packet->RemoveHeader(h);
@@ -680,19 +710,12 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 			case mobileSink_Type: {	//mobileSinkNode收到packet
 				switch (pType) {				
 					case data_Type:
-						//ProcessDataGatheringPacket(thisNode, packet, h);
-					//	 cout<<"进入回调--接收数据包的节点id�??:"<<sourceNode->GetId()<<endl;
+						cout<<"ms收到数据包，来自节点id:"<<sourceNode->GetId()<<endl;
 						totalBytesGathered += pktSize;
 						break;
 				case neighbor_Type:		
 					{
-				//		if(distance1<senseDistance){
-						uint32_t curId = thisNode->GetId();
-						Ipv4Address src = h.GetSource();
-						Ptr<Node>node = GetNodePtrFromIpv4Adr(src,senseNodes,sinkNodes,mobileSinkNode);
-						uint32_t id = node->GetId();						
-						graph.addMSNodeToList(id,curId);
-			//			}							
+					
 					}														
 						break;						
 					default:
@@ -702,34 +725,32 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 			}
 			case sense_Type: {	//senseNode收到packe
 				switch (pType) {
-					
-					case data_Type: {///收到data_Type的packet，将执�?�中�??
-					
+					case data_Type: {///收到data_Type的packet，将执�?�中�???
 						if (CheckRemainingJ(thisNode, packet)) {
 							UpdateEnergySources(thisNode, packet, 1,mobileSinkNode);
-							// cout<<"进入回调--接收数据包的节点id�??:"<<thisNode->GetId()<<endl;
+							// cout<<"进入回调--接收数据包的节点id�???:"<<thisNode->GetId()<<endl;
 							ProcessDataPacket(thisNode, packet, h);
 						}
 					}
 						break;
-					case neighbor_Type: {///收到neighbor_Type的packet，将更新邻居表
+					case neighbor_Type: {///收到neighbor_Type的packet，将更新邻居�?
+						nodeType sType = CheckNodeType(sourceNode,senseNodes,sinkNodes,mobileSinkNode.Get(0));
+						if(sType==sense_Type){
 						uint32_t curId = thisNode->GetId();
-						//发送广�??包的节点
-						Ipv4Address src = h.GetSource();
-						Ptr<Node>node = GetNodePtrFromIpv4Adr(src,senseNodes,sinkNodes,mobileSinkNode);
-						uint32_t id = node->GetId();			
+						//发送广�???包的节点
+						uint32_t id = sourceNode->GetId();			
 						Vector location1;
 						Vector location2;
 						location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
-						location2 = node->GetObject<MobilityModel>()->GetPosition();
+						location2 = sourceNode->GetObject<MobilityModel>()->GetPosition();
 						Ptr<Node>msNode = mobileSinkNode.Get(0);
 						Vector location;							
 						location = msNode->GetObject<MobilityModel>()->GetPosition();			 
-						double distance1 = GetdistanOf2Nodes(location1,location);//接收广播包到ms的距离
-						double distance2 = GetdistanOf2Nodes(location2,location);
+						double distance1 = GetdistanOf2Nodes(location1,location);//接收广播包到ms的距�?
+						double distance2 = GetdistanOf2Nodes(location2,location);	
 						if(distance1 < distance2)
-						graph.addSenseNodeToList(id,getAttract(thisNode,node),curId);                  
-						
+						graph.addSenseNodeToList(id,0,curId);
+						}						                  						
 					}
 						break;
 					default: 
@@ -740,21 +761,23 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 			case sink_Type: {	//sinkNode收到packet
 				switch (pType) {
 					//缺少数据包包逻辑
-				case data_Type: {///收到data_Type的packet，将执�?�中�??
-					// cout<<"�??继节�?? "<<thisNode->GetId()<<"获取到的数据包数�??--->"<<packet->GetSize()<<endl;
-
+				case data_Type: {///收到data_Type的packet，将执�?�中�???
+					// cout<<"�?继节�? "<<thisNode->GetId()<<"获取到的数据包数�???--->"<<packet->GetSize()<<endl;
 					// relaySend += packet->GetSize();
 					UpdateEnergySources(thisNode, packet, 1,mobileSinkNode);
 					ProcessSinkDataPacket(thisNode, packet, h);
 				}
 					break;
 				case neighbor_Type:{
-						uint32_t curId = thisNode->GetId();
-						//发送广�??包的节点
-						Ipv4Address src = h.GetSource();
-						Ptr<Node>node = GetNodePtrFromIpv4Adr(src,senseNodes,sinkNodes,mobileSinkNode);
-						uint32_t id = node->GetId();				
-						graph.addSinkNodeToList(id,getAttract(thisNode,node),curId);
+						nodeType sType = CheckNodeType(sourceNode,senseNodes,sinkNodes,mobileSinkNode.Get(0));
+						uint32_t curId = thisNode->GetId();						
+						uint32_t id = sourceNode->GetId();										
+						if(sType==sense_Type){
+						graph.addSinkNodeToList(id,0,curId);
+						}
+						else{									
+						graph.addSinkSinkToList(id,0,curId);
+						}
 				}
 					break;
 				default:
@@ -772,7 +795,7 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 
 
 /*
- * 创建系统仿真文件�??
+ * 创建系统仿真文件�???
  */
 void createSimFolder(){
 	time_t rawTime;
@@ -788,14 +811,14 @@ void createSimFolder(){
 	ssi<<setw(2)<<setfill('0')<<right<<(timeInfo->tm_mon+1)<<"-";
 	ssi<<setw(2)<<setfill('0')<<right<<timeInfo->tm_mday;
 	mkdir(ssi.str().c_str(), S_IRWXU);
-	//创建sim结果子文件夹，时间为�??录名
+	//创建sim结果子文件夹，时间为�???录名
 	ssi << "/";
 	ssi << setw(2) << setfill('0') << right << timeInfo->tm_hour;
 	ssi << setw(2) << setfill('0') << right << timeInfo->tm_min;
 	ssi << setw(2) << setfill('0') << right << timeInfo->tm_sec;
 	mkdir(ssi.str().c_str(), S_IRWXU);
 	ssi<<"/";
-	thisSimPath=ssi.str();//文件夹路径，下层�??具体文件
+	thisSimPath=ssi.str();//文件夹路径，下层�???具体文件
 	ssi.str("");
 	ssi.clear();
 }
@@ -824,18 +847,18 @@ void netSet(){
 
 
 /*
- * �??否生成XML动画文件
+ * �???否生成XML动画文件
  */
 void createXml(){
 	/**Set anim**/
 	if (Banim) {
 		if(isEntity){
-			Panim = new AnimationInterface("/home/wsn/jgy/sim_temp/output.xml");
+			Panim = new AnimationInterface("/home/wsn/sim_temp/FFOA/output.xml");
 		}else{
 			if(isRelay){
-				Panim = new AnimationInterface("/home/wsn/jgy/sim_temp/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FFOA/output.xml");
 			}else{
-				Panim = new AnimationInterface("/home/wsn/jgy/sim_temp/"+mobilityModel+"/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FFOA/"+mobilityModel+"/output.xml");
 			}
 			
 		}
@@ -862,18 +885,18 @@ void createXml(){
 
 void finalRecord(){
 	// simFinishRealTime = clock();
-	// //生命周期的统�??
-	// cout<<"初�?�能�?? = "<<initialJ<<endl;
+	// //生命周期的统�???
+	// cout<<"初�?�能�??? = "<<initialJ<<endl;
 	// cout<<"网络生命周期 = " << (double)simFinishRealTime/1000000.0 << "(s)" << std::endl;
 
-	// cout<<"�??继发送的数据总量�?? = "<<relaySend<<endl;
+	// cout<<"�???继发送的数据总量�??? = "<<relaySend<<endl;
 
-	// // cout<<"开始时�??:"<<simStartRealTime<<endl;
+	// // cout<<"开始时�???:"<<simStartRealTime<<endl;
 	// // cout<<"结束时间:"<<simFinishRealTime<<endl;
-	// // cout<<"发送数�??�??:"<<totalBytesGenerated<<endl;
-	// // cout<<"接收数据�??:"<<totalBytesGathered<<endl;
+	// // cout<<"发送数�???�???:"<<totalBytesGenerated<<endl;
+	// // cout<<"接收数据�???:"<<totalBytesGathered<<endl;
 	// cout<<"PDR:"<<totalBytesGathered/totalBytesGenerated*100<<"%"<<endl;
-	// cout<<"网络吞吐�??:"<<totalBytesGathered*1000.0/(simFinishRealTime-simStartRealTime)<<"(Byte/s)"<<endl;
+	// cout<<"网络吞吐�???:"<<totalBytesGathered*1000.0/(simFinishRealTime-simStartRealTime)<<"(Byte/s)"<<endl;
 	// EnergyFinalRecord(senseNodes, remaingJ);
 
 
@@ -882,22 +905,22 @@ void finalRecord(){
 	std::stringstream ss;
 	if(isLifeCycle){
 		if(isEntity){
-			ss << "/home/wsn/jgy/sim_temp"<<initialJ<<"-entity.record";
+			ss << "/home/wsn/sim_temp/FFOA/"<<initialJ<<"-entity.record";
 		}else{
 			if(isRelay){
-				ss << "/home/wsn/jgy/sim_temp"<<initialJ<<"-J-"<<nSinkNodes<<"-LIFE-RELAYs-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/FFOA/"<<initialJ<<"-J-"<<nSinkNodes<<"-LIFE-RELAYs-"+mobilityModel+".record";
 			}else{
-				ss << "/home/wsn/jgy/sim_temp"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/FFOA/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
 			}
 		}
 	}else{
 		if(isEntity){
-			ss << "/home/wsn/jgy/sim_temp"<<maxPackets<<"-entity.record";
+			ss << "/home/wsn/sim_temp/FFOA/"<<maxPackets<<"-entity.record";
 		}else{
 			if(isRelay){
-				ss << "/home/wsn/jgy/sim_temp"<<nSinkNodes<<"-SINK-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/FFOA/"<<nSinkNodes<<"-SINK-"+mobilityModel+".record";
 			}else{
-				ss << "/home/wsn/jgy/sim_temp"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
+				ss << "/home/wsn/sim_temp/FFOA/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
 			}
 		}
 	}
@@ -905,27 +928,27 @@ void finalRecord(){
 	std::ofstream of(ss.str().c_str());
 	simFinishRealTime = clock();
 	if(mobilityModel.length()==0){
-		cout<<"使用的移动模�??:RWP"<<endl;
-		ss << std::endl << "使用的移动模�??:" << "RWP"<< std::endl;
+		cout<<"使用的移动模�???:RWP"<<endl;
+		ss << std::endl << "使用的移动模�???:" << "RWP"<< std::endl;
 	}else{
-		cout<<"使用的移动模�??:"<<mobilityModel<<endl;
-		ss << std::endl << "使用的移动模�??:" << mobilityModel<< std::endl;	
+		cout<<"使用的移动模�???:"<<mobilityModel<<endl;
+		ss << std::endl << "使用的移动模�???:" << mobilityModel<< std::endl;	
 	}
 
-	//如果测量网络生存周期,记录如下�??
+	//如果测量网络生存周期,记录如下�???
 	if(isLifeCycle){
-		cout<<"初�?�能�??:"<<initialJ<<endl;
-		cout<<"网络生存�??:"<<lifeTime<<"(s)"<<endl;
-		ss << std::endl << "初�?�能�??:" << initialJ<<"(J)"<< std::endl;
+		cout<<"初�?�能�???:"<<initialJ<<endl;
+		cout<<"网络生存�???:"<<lifeTime<<"(s)"<<endl;
+		ss << std::endl << "初�?�能�???:" << initialJ<<"(J)"<< std::endl;
 		ss << std::endl << "网络生命周期:" << lifeTime<<"(s)"<< std::endl;
 	}else{
 		std::cout << "网络时延: " << netDelay<< "\n";
 		std::cout<<"PDR指标:"<<totalBytesGathered/totalBytesGenerated*100<<"%"<<endl;
 		cout<<totalBytesGathered<<endl;
 		cout<<totalBytesGenerated<<endl;
-		std::cout<<"网络吞吐�??:"<<totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
+		std::cout<<"网络吞吐�???:"<<totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
 		ss << std::endl << "网络时延:" << netDelay<<"(ms)"<< std::endl;
-		ss << std::endl << "网络吞吐�??: " << totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
+		ss << std::endl << "网络吞吐�???: " << totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
 		ss << std::endl << "PDR指标:" <<totalBytesGathered/totalBytesGenerated*100<<"%"<<endl;
 	}
 
@@ -980,7 +1003,7 @@ void changeColor(uint32_t id,bool flag){
 	if(id == 0){
 		return;
 	}
-	if(!flag){//false的时�??,更新为繁忙状�??
+	if(!flag){//false的时�???,更新为繁忙状�???
 		Panim->UpdateNodeColor(GetNodePtrFromGlobalId(id,sinkNodes,mobileSinkNode), 200, 250, 0);
 	}else{
 		Panim->UpdateNodeColor(GetNodePtrFromGlobalId(id,sinkNodes,mobileSinkNode), 0, 200, 255);
@@ -989,7 +1012,7 @@ void changeColor(uint32_t id,bool flag){
 }
 
 void createNode(){
-	// correctNodes.Create(1);//�??�??id和ip地址对应关系,方便调试
+	// correctNodes.Create(1);//�???�???id和ip地址对应关系,方便调试
 	//Create nodes
 	
 	senseNodes.Create(nNodes);
@@ -998,7 +1021,7 @@ void createNode(){
 	// ns2.Install ();
 	sinkNodes.Create(nSinkNodes);
 	//if(!isEntity){
-		std::string traceFile = "scratch/ffoa/RPGM/ffoa_speed5.ns_movements";
+		std::string traceFile = "scratch/FFOA/RPGM/ffoa_speed5.ns_movements";
 		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
 		ns2.Install ();
 	//}
@@ -1030,7 +1053,7 @@ void createMobilityModel(){
                              "Y", StringValue ("500"),
                              "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=500]"));
 	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	mobility.Install(senseNodes);     //为sense节点安�?�移动模�??
+	mobility.Install(senseNodes);     //为sense节点安�?�移动模�???
 	Ptr<ListPositionAllocator> lpa = CreateObject<ListPositionAllocator>();
 	lpa->Add(Vector(500, 500, 0));
 	mobility.SetPositionAllocator(lpa);
@@ -1100,12 +1123,12 @@ void createWifiDevice(){
 }
 
 /*
- * 安�?�网络协�??栈，比�?�AODV等协�??，需要安装到该�?��?
+ * 安�?�网络协�???栈，比�?�AODV等协�???，需要安装到该�?��?
  */
 void installInternetStack(){
 	InternetStackHelper stack2;
-	stack2.Install (senseNodes);//注意，AODV协�??安�?�到nodes节点�??
-	stack2.Install (sinkNodes);//注意，AODV协�??安�?�到nodes节点�??
+	stack2.Install (senseNodes);//注意，AODV协�??安�?�到nodes节点�???
+	stack2.Install (sinkNodes);//注意，AODV协�??安�?�到nodes节点�???
    stack2.Install (mobileSinkNode);
 	Ipv4AddressHelper ipv4;
 	ipv4.SetBase("10.1.1.0", "255.255.255.0");
@@ -1146,9 +1169,9 @@ void createSocketCallBack(){
 int main(int argc, char* argv[]) {
 	//step0:全局变量初�?�化
 	mSinkTraceY = maxY/2; //the y value of sink path
-	//step 1 :定义main�??局部变�??
+	//step 1 :定义main�???局部变�???
 	double simStartTime = 0.0;  //seconds
-	//step 2:解析命令行输入参�??
+	//step 2:解析命令行输入参�???
 	CommandLine cmd;
 	cmd.AddValue("nNodes", "Number of Nodes", nNodes);
 	cmd.AddValue("mobilityModel","use mobilityModel", mobilityModel);
@@ -1175,27 +1198,27 @@ int main(int argc, char* argv[]) {
 	cmd.AddValue("Tgather","The percentage of threshold of data gathering percentage,(0,1) ",Tgather);
 	cmd.Parse(argc, argv);
 	NS_LOG_DEBUG("Configure done!");
-	//放在cmd.Parse()后面才会生效的变量赋�??
+	//放在cmd.Parse()后面才会生效的变量赋�???
 	simStopTime=totalTime;
-	//step 3:创建仿真文件�??
+	//step 3:创建仿真文件�???
 	createSimFolder();
 	//step 4:设置不同文件log级别
 	setLog();
-	//step 5:设置基�?�网�?
+	//step 5:设置基�?�网�??
 	netSet();
 	//step 6:创建节点
 	createNode();
-	//step 7:创建并安装移动模�??
+	//step 7:创建并安装移动模�???
 	createMobilityModel();
 	//step 8:创建wifi设�??
 	createWifiDevice();
-	//step 9:安�?�网络协�??�??
+	//step 9:安�?�网络协�???�???
 	installInternetStack();
 	//step 10:设置socket回调
 	createSocketCallBack();
 	//step 11:生成xml动画文件
 	createXml();
-	//step 12:节点安�?�能�??
+	//step 12:节点安�?�能�???
 	InstallEnergy(senseNodes,sinkNodes);
 	cout<<"install energy done!"<<endl;
 	//FlowMonitor set------    
@@ -1209,10 +1232,10 @@ int main(int argc, char* argv[]) {
 
 	testIP();
 	// Simulator::Schedule(Seconds(2.0),&startRoute,senseNodes.Get(0),GetNodeIpv4Address(senseNodes.Get(0)));
-	//测试周期性邻居交�??信息
+	//测试周期性邻居交�???信息
 	Simulator::Schedule(Seconds(0.0),&update);   
 	Simulator::Schedule(Seconds(2.0),&setSimStartTime);
-	Simulator::Schedule(Seconds(2.2),&DataToSink);
+	Simulator::Schedule(Seconds(2.5),&DataToSink);
 
 
 	//step 16:仿真相关
@@ -1227,7 +1250,7 @@ int main(int argc, char* argv[]) {
 		delay=delay+i->second.delaySum;    
 		num++;
 	}
-	cout<<"网络时延:"<<delay/num<<endl;//单跳的平均时延
+	cout<<"网络时延:"<<delay/num<<endl;//单跳的平均时�?
 	netDelay = delay/num;
 	// cout<<"网络生命周期:"<<TIME_STAMP_FUC<<"(s)"<<endl;
 	Simulator::Destroy();

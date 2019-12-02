@@ -18,13 +18,11 @@ public:
     ~GraphList();
 	void clear();
 	void addSenseNodeToList(int nFrom, double Attract, int nTo);
-	void addMSNodeToList(int vFrom, int vTo);
 	void addSinkNodeToList(int vFrom, double Attract, int vTo);
 	void makeNodeArray();
 	uint32_t  findBestAttract(uint32_t thisId,nodeType nType_1,nodeType nType_2);
 	void print();
-	void clearSense();
-	void clearSink();
+	//void clearNode();
 	void addSinkSinkToList(int vFrom, double Attract, int vTo);
 	void print1(uint32_t id);
 
@@ -35,7 +33,6 @@ public:
 	Node1* sense2Sense;
 	Node1* sense2Sink;
 	Node1* sink2Sink;
-	Node1* sense2MS;
 };
 
 //ä¿?æ”¹éƒ¨åˆ?
@@ -61,17 +58,6 @@ void GraphList::addSenseNodeToList(int vFrom, double Attract, int vTo)
 		sense2Sense[vFrom].next = pNode1;
 	}
 }
-
-void GraphList::addMSNodeToList(int vFrom, int vTo)
-{
-	Node1* pNode1 = new Node1();
-	pNode1->id = vTo;
-	pNode1->Attract = 0;
-	pNode1->next = NULL;
-	if (sense2MS[vFrom].next==NULL)
-		sense2MS[vFrom].next = pNode1;
-}
-
 
 void GraphList::addSinkNodeToList(int vFrom, double Attract, int vTo)
 {
@@ -115,7 +101,6 @@ void GraphList::makeNodeArray()
 {
 	sense2Sense = new Node1[nCount];
 	sense2Sink=new Node1[nCount];
-	sense2MS=new Node1[nCount];
 	sink2Sink=new Node1[nSinkCount];
 	for (int i = 0; i < nCount; ++i){
 		sense2Sense[i].id = i;
@@ -124,9 +109,6 @@ void GraphList::makeNodeArray()
 		sense2Sink[i].id = i;
 		sense2Sink[i].next = NULL;
 		sense2Sink[i].Attract=0;
-		sense2MS[i].id = i;
-		sense2MS[i].next = NULL;
-		sense2MS[i].Attract=0;
 	}
 	for(int j = 0; j < nSinkCount; ++j){
 		sink2Sink[j].id=j;
@@ -142,43 +124,7 @@ void GraphList::makeNodeArray()
 uint32_t GraphList::findBestAttract(uint32_t thisId,nodeType nType_1,nodeType nType_2){
 	double maxAttract;
 	uint32_t maxId;
-	/*if(nType_1==sense_Type){
-		Node1* tmp = sense2Sense[thisId].next;
-			if(tmp){
-				maxAttract=tmp->Attract;
-				maxId=tmp->id;
-			    while(tmp->next){
-					tmp=tmp->next;
-					if(tmp->Attract>maxAttract){
-						maxAttract=tmp->Attract;
-						maxId=tmp->id;
-					}
-				}
-				cout<<"maxAttract"<<maxAttract<<endl;
-			    return maxId;
-			}
-		    else
-				return 100;
-	}
-	else{
-		Node1* tmp = sense2Sink[thisId].next;
-			if(tmp){
-				maxAttract=tmp->Attract;
-				maxId=tmp->id;
-			    while(tmp->next){
-					tmp=tmp->next;
-					if(tmp->Attract>maxAttract){
-						maxAttract=tmp->Attract;
-						maxId=tmp->id;
-					}
-				}
-			    return maxId;
-			}
-		    else
-				return 100;
-	}
-*/
-if(nType_1==sense_Type){
+	if(nType_1==sense_Type){
 		if(nType_2==sense_Type){
 			Node1* tmp = sense2Sense[thisId].next;
 			if(tmp){
@@ -269,10 +215,11 @@ void GraphList::print(){
 		}
 		cout<<endl;
 	}
-    cout<<"sense ms neighbor"<<endl;
-	for (int i = 0; i < nCount; ++i){
-		Node1* tmp = sense2MS[i].next;
-		int id1 = sense2MS[i].id;
+	cout<<"<------------------------------------------------------------->"<<endl;
+	cout<<"sink sink neighbor"<<endl;
+	for (int i = 0; i < nSinkCount; ++i){
+		Node1* tmp = sink2Sink[i].next;
+		int id1 = sink2Sink[i].id;
 		cout <<id1<< "->";
 		while(tmp){
 			cout << tmp-> id << "->"<<tmp->Attract<<"   ";
@@ -280,6 +227,7 @@ void GraphList::print(){
 		}
 		cout<<endl;
 	}
+	cout<<"s3"<<endl;
 }
 
 
@@ -290,7 +238,6 @@ void GraphList::clear()
 	for (int i = 0; i < nCount; ++i){
 			sense2Sense[i].next = NULL;
 			sense2Sink[i].next = NULL;
-			sense2MS[i].next = NULL;
 		}
 	for (int i = 0; i < nSinkCount; ++i)
 			sink2Sink[i].next = NULL;

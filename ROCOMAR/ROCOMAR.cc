@@ -223,7 +223,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address s
 			}
 
 			distance_1 = GetdistanOf2Nodes(location_1,location_2);//接收广播包到ms的距离
-			// 算法二:链路保持要断开
+			// 算法一:重复链路增强算法
 			if(distance_1 < maxDis){//解除机器人占用的条件
 				if(nodeRobotMap.find(localId) != nodeRobotMap.end()){
 					// cout<<"解除占用------------------>"<<endl;
@@ -238,7 +238,7 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,Ipv4Address s
 		}
 
 		// cout<<"gatewayId:"<<gatewayId<<" ,distance:"<<distance_1<<endl;
-		//算法一:链路强化  
+		//算法二：移动中继到两者位置中心
 		if(gatewayId == 1024 || distance_1>maxDis){
 			cout<<"请求中继----->"<<endl;
 			Vector mid = getMiddle(location_1,location_2);
@@ -791,10 +791,10 @@ void createWifiDevice(){
 void installInternetStack(){
 	InternetStackHelper stack2;
 	
-	stack2.Install (senseNodes);//注意，AODV协议安装到nodes节点上
+	stack2.Install (senseNodes);//注意，协议安装到nodes节点上
 	
 	stack2.Install (mobileSinkNode);
-	stack2.Install (relayNodes);//注意，AODV协议安装到nodes节点上
+	stack2.Install (relayNodes);//注意，协议安装到nodes节点上
 
 	Ipv4AddressHelper ipv4;
 	ipv4.SetBase("10.1.1.0", "255.255.255.0");
