@@ -17,7 +17,7 @@ namespace ns3 {
 	bool CheckRemainingJ(Ptr<Node> n, Ptr<Packet> pkt);
 	bool CheckRemainingJ(Ptr<Node> n);
 	// void UpdateNodesColorByEnergy(Ptr<Node> n, double per, nodeType nT);
-	void UpdateNodesColorByEnergy(Ptr<Node> n, double per);
+	void UpdateNodesColorByEnergy(Ptr<Node> n, double per,nodeType nT);
 	void UpdateEnergySources(Ptr<Node> n, Ptr<Packet> p, uint16_t flag,NodeContainer mobileSinkNode);
 	void DoDrainRecord(Ptr<Node> thisNode);
 

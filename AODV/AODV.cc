@@ -1,7 +1,8 @@
 /*
+ * lyh 研究点一 对比算法：AODV
 */
 
-#include "ns3/flow-monitor-module.h"
+
 #include "ns3/aodv-module.h"
 #include "ns3/core-module.h"
 #include "ns3/energy-module.h"
@@ -24,14 +25,11 @@
 
 using namespace ns3;
 using namespace std;
-
 clock_t lifeTime;
 string mobilityModel;
 bool isLifeCycle;
 bool isEntity;
-
 NS_LOG_COMPONENT_DEFINE("aodvScript");
-
 static int packetsSent = 0;
 static int packetsReceived = 0;
 Time netDelay;
@@ -43,19 +41,32 @@ static std::string phyMode("DsssRate11Mbps");
 
 //统计相关
 static double simRunTime=0.0;
-clock_t simStartRealTime;
-clock_t simFinishRealTime;
+
+static double simStartRealTime=0.0;
+static double simFinishRealTime=0.0;
 
 //统计时延
 static Time receivetime;
 static Time sendtime;
 
-NodeContainer c;
-NodeContainer nodes;
-NodeContainer mobileSinkNode;
+static NodeContainer c;
+static NodeContainer nodes;
+static NodeContainer mobileSinkNode;
+static NodeContainer netConnHelper;
 
 NetDeviceContainer cDevices;
 Ipv4InterfaceContainer cIfs;
+
+int maxNodes = 50;  // lyh
+int ConnSum = 0;
+int ConnTimes = 0;
+
+string speed = "";
+//Connectivity index
+int netConn[MAX_NUM];
+int nNodes = 25;
+void getNetConn();
+double GetdistanOf2Nodes(Vector one,Vector two);
 
 
 //全局变量声明
@@ -97,24 +108,17 @@ TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
 
 void RecvPacketCallback (Ptr<Socket> socket)
 {
+  
   Ptr<Packet> packet;
   simRunTime = Simulator::Now().GetSeconds();
   while ((packet = socket->Recv ()))
     {
 		Ptr<Node> thisNode = socket->GetNode();
-       // Ipv4Address address = GetNodeIpv4Address(thisNode);
 		if (CheckRemainingJ(thisNode, packet)) {
-			// UpdateEnergySources(thisNode, packet, 1,mobileSinkNode);
 			Ipv4Header h;
 			packet->PeekHeader(h);
-			//Ipv4Address sourceAdr = h.GetSource();	//Packet的source节点地址
 			packetsReceived++;
-			//std::cout<<address<<" Received packet - "<<packetsReceived<<" from:"<<sourceAdr<<" and Size is "<<packet->GetSize ()<<" Bytes."<<std::endl;
-			//吞吐量测试
-			// std::cout<<"simRunTime now - "<<simRunTime<<std::endl;
 			receivetime= Simulator::Now();
-			//std::cout<<"package relay - "<<(receivetime-sendtime)<<std::endl;
-			// std::cout<<"Throughput now - "<<packetsReceived*1024*8/simRunTime<<"bps"<<std::endl;
 		}else{
 			cout<<"接收器能量用光，停止仿真！："<<endl;
 			// Simulator::Stop();
@@ -150,18 +154,15 @@ static void GenerateTraffic (Ipv4Header ipv4Header,Ptr<Packet> pkt,Ptr<Socket> s
  */
 void createNode(){
 	c.Create(size);
-	if(!isEntity){
-		std::string traceFile = "scratch/"+mobilityModel+"/nomadic_speed20.ns_movements";
-		Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-		ns2.Install ();
-		
-	}
+	std::string traceFile = "scratch/"+mobilityModel+"/speed"+speed+".ns_movements";
+	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
+	ns2.Install ();
 
-	//for(uint32_t i=0;i<size-1;i++){
 	for(uint32_t i=0;i<size;i++){
 		nodes.Add(c.Get(i));
 	}
 	// mobileSinkNode.Add(c.Get(size-1));
+	netConnHelper.Add(nodes);
 	mobileSinkNode.Create(1);
 	NS_LOG_DEBUG("Create nodes done!");
 }
@@ -199,7 +200,7 @@ void createMobilityModel(){
 	
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 	mobility.Install(mobileSinkNode);
-	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
+	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 250, 0));
 
 	if(isEntity){
 		mobility.Install(nodes);
@@ -207,6 +208,64 @@ void createMobilityModel(){
 	}
 
 }
+
+/*
+ * 计算网络连通度函数
+ * lyh 
+ */
+void getNetConn(){
+	// 清除netConn
+	for(int m = 0; m < maxNodes; m++)
+		netConn[m] = 0;
+	// 首先遍历所有节点，将和MBase连接的节点的netConn置1 // 是否需要区分MRelay和MNode执行不同的MobilityModel
+	Ptr<Node>msNode = mobileSinkNode.Get(0);
+	Vector ms_location = msNode->GetObject<ConstantPositionMobilityModel>()->GetPosition();
+	for(NodeContainer::Iterator i = netConnHelper.Begin(); i != netConnHelper.End(); i++)
+	{
+		Ptr<Node> thisNode = *i;
+		Vector node_location;
+		node_location = thisNode->GetObject<MobilityModel>()->GetPosition();
+		double distance = GetdistanOf2Nodes(node_location, ms_location);
+		if(distance < maxDis)
+			netConn[thisNode->GetId()] = 1;		
+	}
+	// 循环遍历节点，看已经连通的节点是否和其在通信范围内，如有存在，则改变数组
+	int times = 0;
+	while(times < 2){
+		times++;
+		for(NodeContainer::Iterator j = netConnHelper.Begin(); j != netConnHelper.End(); j++){
+			Ptr<Node> preNode = *j;
+			if(netConn[preNode->GetId()] != 1)
+				continue;
+			for(NodeContainer::Iterator s = netConnHelper.Begin(); s != netConnHelper.End(); s++)
+			{
+				Ptr<Node> backNode = *s;
+				if(preNode->GetId() == backNode->GetId() || netConn[backNode->GetId()] == 1)
+					continue;				
+				Vector pre_location = preNode->GetObject<MobilityModel>()->GetPosition();
+				Vector back_location =  backNode->GetObject<MobilityModel>()->GetPosition();
+				double distance_pb = GetdistanOf2Nodes(pre_location, back_location);				
+				if( distance_pb < maxDis){
+					netConn[backNode->GetId()] = 1;
+				}				
+			}
+		}
+	}
+	int conn = 0;
+	for (int index = 0; index < maxNodes; index++)
+		conn += netConn[index];
+	ConnSum += conn;
+	ConnTimes += 1;
+	cout<<"网络连通性为" <<conn <<endl;	
+	//Simulator::Schedule (Seconds (interval), &GenerateTraffic, ipv4Header,pkt,socket, interPacketInterval);
+	Simulator::Schedule(Seconds (10.0), &getNetConn);
+}
+
+double GetdistanOf2Nodes(Vector one,Vector two) {
+	return std::sqrt((one.x - two.x)*(one.x - two.x) + (one.y - two.y)*(one.y - two.y));
+}
+
+
 //创建网络设备
 void createWifiDevice(){
 	//协议栈部分
@@ -270,7 +329,7 @@ void createSocketCallBack(){
 	//改成把IP地址也发送出去
 	uint32_t t = 0;
 	double interval = 1.0;
-	packetsSent+=10;
+	packetsSent+=nNodes;
 	for (NodeContainer::Iterator i = nodes.Begin(); i != nodes.End();
 		i++) {
 		// cout<<"--------------------->"<<nodes.GetN()<<endl;
@@ -314,58 +373,33 @@ void createXML(){
 
 //仿真结束以后的统计
 void finalRecord(){
-	//仿真结束以后，会调用如上方法，所以，如下会最后输出。
 	std::cout<<"\n\n***** OUTPUT *****\n\n";
 	std::stringstream ss;
-	if(isLifeCycle){
-		if(isEntity){
-			ss << "/home/wsn/sim_temp/AODV/"<<mobilityModel<<"/LIFE/"<<initialJ<<"-entity.record";
-		}else{
-			ss << "/home/wsn/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<initialJ<<"-"+mobilityModel+".record";
-		}
-	}else{
-		// if(isEntity){
-			ss << "/home/wsn/sim_temp/AODV/"<<mobilityModel<<"/"<<maxPackets<<"-entity.record";
-		// }else{
-		// 	ss << "/home/wsn/sim_temp/GROUPAODV/"<<mobilityModel<<"/"<<maxPackets<<"-"+mobilityModel+".record";
-		// }
-	}
-	
+	ss << "/home/wsn/sim_temp/AODV/"<<mobilityModel<<"/"<<speed<<"-"<<maxPackets<<".record";
 	std::ofstream of(ss.str().c_str());
-	simFinishRealTime = clock();
-	// if(mobilityModel.length()==0){
-	// 	cout<<"使用的移动模型:RWP"<<endl;
-	// 	ss << std::endl << "使用的移动模型:" << "RWP"<< std::endl;
-	// }else{
+	simFinishRealTime = Simulator::Now().GetSeconds();
 	cout<<"使用的移动模型:"<<mobilityModel<<endl;
 	ss << std::endl << "使用的移动模型:" << mobilityModel<< std::endl;	
-	// }
-	//如果测量网络生存周期,记录如下值
-	if(isLifeCycle){
-		cout<<"初始能量:"<<initialJ<<endl;
-		cout<<"网络生存期:"<<lifeTime<<"(s)"<<endl;
-		ss << std::endl << "初始能量:" << initialJ<<"(J)"<< std::endl;
-		ss << std::endl << "网络生命周期:" << lifeTime<<"(s)"<< std::endl;
-	}else{
-		std::cout << "网络时延: " << netDelay<< "\n";
-		std::cout<<"PDR指标:"<<(float)(packetsReceived*100/packetsSent)<<" %"<<std::endl;
-		std::cout<<"网络吞吐量:"<<(float)(packetsReceived*1500)/((simFinishRealTime-simStartRealTime)/1000)<<"(byte/s)"<<std::endl;
-		ss << std::endl << "网络时延:" << netDelay<<"(ms)"<< std::endl;
-		ss << std::endl << "网络吞吐量: " << packetsReceived*1500*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)" << std::endl;
-		ss << std::endl << "PDR指标:" <<packetsReceived*100.0/packetsSent<<" %"<< std::endl;
-	}
-
-	// ss << "Total comsumed energy = " << totalConsumed <<std::endl;
-
+	std::cout << "网络时延: " << netDelay<< "\n";
+	std::cout << "网络平均连通性: " << (float)((ConnSum * 1.0) / (ConnTimes * nNodes)) << "\n";
+	std::cout<<"PDR指标:"<<(float)(packetsReceived*100/packetsSent)<<" %"<<std::endl;
+	std::cout<<"网络吞吐量:"<<(float)(packetsReceived*1500*8)/((simFinishRealTime - simStartRealTime)*1000)<<"(kbps)"<<std::endl;
+	ss << std::endl << "网络时延:" << netDelay<< std::endl;
+	ss << std::endl << "网络吞吐量: " << (float)(packetsReceived*1500*8)/((simFinishRealTime - simStartRealTime)*1000)<<"(kbps)" << std::endl;
+	cout<<Simulator::Now().GetSeconds()<<endl;
+	ss << std::endl << "PDR指标:" <<packetsReceived*100.0/packetsSent<<" %"<< std::endl;
+	ss << std::endl << "网络平均连通性: " << (float)((ConnSum * 1.0) / (ConnTimes * nNodes)) <<std::endl;
 	NS_LOG_INFO(ss.str().c_str());
 	of << ss.str().c_str();
 	of.close();
 }
+
+
 //主函数入口
 int main(int argc, char **argv)
 {
 
-	simStartRealTime = clock();
+	simStartRealTime = Simulator::Now().GetSeconds();
 	//解析命令行输入参数
 	CommandLine cmd;
 	cmd.AddValue("initialJ","Initial energy of each BaiscEnergySource", initialJ);
@@ -376,10 +410,10 @@ int main(int argc, char **argv)
 	cmd.AddValue("mobilityModel","use mobilityModel", mobilityModel);
 	cmd.AddValue("isLifeCycle","is test lifeCycle", isLifeCycle);
 	cmd.AddValue("isEntity","is entity", isEntity);
-	
+	cmd.AddValue("speed","Speed of nodes",speed);
 
 	cmd.Parse(argc, argv);
-
+	
 
 	LogComponentEnable("Energy", LOG_LEVEL_DEBUG);
  	LogComponentEnable("aodvScript", LOG_LEVEL_DEBUG);
@@ -388,10 +422,12 @@ int main(int argc, char **argv)
     createNode();
 	createMobilityModel();
 	InstallEnergy(nodes);
-
 	cout<<"install energy done!"<<endl;
-	// createMobilityModel();
-
+	
+	for(int j=0; j<maxNodes; j++){
+		netConn[j] = 0;
+	}	
+	getNetConn();
 	createXML();
 	createWifiDevice();
 	installInternetStack();
@@ -401,19 +437,11 @@ int main(int argc, char **argv)
     flowMonitor = flowHelper.InstallAll();
 
 	createSocketCallBack();
-	
-	//Simulator::Stop (Seconds (totalTime));
 	Simulator::Run ();
-	Simulator::Destroy ();
 	
-
-	// std::cout<<"网络生命周期 = "<<Simulator::Now().GetSeconds()<<std::endl;
-	
-	// EnergyFinalRecord(nodes, remaingJ);
-
 	
 	Time delay;
-	uint32_t num;
+	long num;
 	flowMonitor->CheckForLostPackets ();
     FlowMonitor::FlowStatsContainer stats = flowMonitor->GetFlowStats ();
     for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
@@ -423,4 +451,5 @@ int main(int argc, char **argv)
     }
 	netDelay = delay/num;
 	finalRecord();
+	Simulator::Destroy ();
 }

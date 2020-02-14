@@ -144,34 +144,35 @@ void UpdateNodesColorByEnergy(Ptr<Node> n, double per){
 		Panim->UpdateNodeColor(n, 50, 0, 0);
 	}
 }
-// void UpdateNodesColorByEnergy(Ptr<Node> n, double per, nodeType nT){
-// 	if (per < 1 && per >= 0.9) {
-// 		if (nT == sink_Type) {
-// 			Panim->UpdateNodeColor(n, 0, 0, 200);
-// 		} else {
-// 			Panim->UpdateNodeColor(n, 200, 0, 0);
-// 		}
-// 	} else if (per < 0.9 && per >= 0.5) {
-// 		if (nT == sink_Type) {
-// 			Panim->UpdateNodeColor(n, 0, 0, 150);
-// 		} else {
-// 			Panim->UpdateNodeColor(n, 150, 0, 0);
-// 		}
-// 	} else if (per < 0.5 && per >= 0.25) {
-// 		if (nT == sink_Type) {
-// 			Panim->UpdateNodeColor(n, 0, 0, 100);
-// 		} else {
-// 			Panim->UpdateNodeColor(n, 100, 0, 0);
-// 		}
-// 	} else {
-// 		if (nT == sink_Type) {
-// 			Panim->UpdateNodeColor(n, 0, 0, 50);
-// 		} else {
-// 			Panim->UpdateNodeColor(n, 50, 0, 0);
-// 		}
-// 	}
-// }
-
+/*
+void UpdateNodesColorByEnergy(Ptr<Node> n, double per, nodeType nT){
+	if (per < 1 && per >= 0.9) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 0, 200);
+		} else {
+			Panim->UpdateNodeColor(n, 200, 0, 0);
+		}
+	} else if (per < 0.9 && per >= 0.5) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 0, 150);
+		} else {
+			Panim->UpdateNodeColor(n, 150, 0, 0);
+		}
+	} else if (per < 0.5 && per >= 0.25) {
+		if (nT == sink_Type) {
+			Panim->UpdateNodeColor(n, 0, 0, 100);
+		} else {
+			Panim->UpdateNodeColor(n, 100, 0, 0);
+		}
+	} else {
+ 		if (nT == sink_Type) {
+ 			Panim->UpdateNodeColor(n, 0, 0, 50);
+ 		} else {
+ 			Panim->UpdateNodeColor(n, 50, 0, 0);
+ 		}
+ 	}
+ }
+*/
 
 void UpdateEnergySources(Ptr<Node> n, Ptr<Packet> p, uint16_t flag,NodeContainer mobileSinkNode) {
 	uint32_t id = n->GetId();

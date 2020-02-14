@@ -198,7 +198,7 @@ void GraphList::print(){
 		int id1 = sense2Sense[i].id;
 		cout <<id1<< "->";
 		while(tmp){
-			cout << tmp-> id << "->"<<tmp->Attract<<"   ";
+			cout << tmp-> id << "("<<tmp->Attract<<")";
 			tmp = tmp->next;
 		}
 		cout<<endl;
@@ -210,7 +210,7 @@ void GraphList::print(){
 		int id1 = sense2Sink[i].id;
 		cout <<id1<< "->";
 		while(tmp){
-			cout << tmp-> id << "->"<<tmp->Attract<<"   ";
+			cout << tmp-> id <<"("<<tmp->Attract<<")";
 			tmp = tmp->next;
 		}
 		cout<<endl;
@@ -222,12 +222,11 @@ void GraphList::print(){
 		int id1 = sink2Sink[i].id;
 		cout <<id1<< "->";
 		while(tmp){
-			cout << tmp-> id << "->"<<tmp->Attract<<"   ";
+			cout << tmp-> id << "("<<tmp->Attract<<")";
 			tmp = tmp->next;
 		}
 		cout<<endl;
 	}
-	cout<<"s3"<<endl;
 }
 
 

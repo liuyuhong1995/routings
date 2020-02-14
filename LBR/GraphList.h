@@ -3,7 +3,7 @@
  
 using namespace std;
  
-// ��
+
 struct Edge{
 	int id;
 	double weight;
@@ -11,13 +11,13 @@ struct Edge{
 	struct Edge* next;
 };
  
-// ����(����ͷ)
+
 struct Vertex{
 	int id;
 	struct Edge* next;
 };
  
-// ����ͼ
+
 class GraphList
 {
 public:

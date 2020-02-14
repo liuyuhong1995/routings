@@ -34,7 +34,7 @@
 #include "GraphList.h"
 using namespace ns3;
 using namespace std;
-NS_LOG_COMPONENT_DEFINE("pOLSRScript");
+NS_LOG_COMPONENT_DEFINE("FRRPScript");
 
 //函数声明
 double GetdistanFromMSink(Ptr<Node> srcN);
@@ -65,12 +65,13 @@ string moveSpeed="";
 bool isSpeed=false;
 
 /*可调参数*/
-double dataInterval = 8; //发包间隔
+double dataInterval = 5.0; //发包间隔
 double updateInterval = 12;//每隔多久更新一次邻居表
 double maxDis = 150.0;     // 需要修改    //最大通信距离,要考虑区域面积和部署相关问题
 double buildNeighborDone = 4.2;//新建立邻居表结束时间,测试最大通信距离225米时候,需要2秒,和节点数也有关
 uint32_t nNodes = 20;
 int maxPackets = 1500;
+int inputSpeed = 0;
 /*
  * 定义UdpSocketFactory为socket的类型和socket的广播地址
  */
@@ -84,8 +85,8 @@ static double offset = 81;  //I don't know
  * Simulator initials global parameters
  */
 double totalTime = 9999.0;  //max simulation time
-clock_t simStartRealTime;
-clock_t simFinishRealTime;
+double simStartRealTime;
+double simFinishRealTime;
 double simStopTime=0.0;
 int UnitPacketNum = 200;
 // int SendPacketsNum[(int)nNodes] = {0};
@@ -121,6 +122,16 @@ uint32_t firstDrainedSinkId=0;
 vector<vector<double> >recvRatio;
 vector<vector<double> >instSpeed;
 vector<vector<double> >dis;
+
+// TestPoint function
+void testEnergy();
+void TestNodes();
+void testIP();
+void testNeighbor();
+
+// TestPoint Switch
+bool isTest=false;
+
 //Others
 bool Banim=false;
 bool Brotate=true;//是否启动动态网关
@@ -129,7 +140,7 @@ bool isStatic = true;
 double firstDrainedNodeTime=0;
 string thisSimPath;//simulation path
 string exeName="EXORMain";
-string simFolderName="/home/wsn/sim_temp/pOLSR";
+string simFolderName="/home/wsn/sim_temp/FRRP";
 uint32_t totalBytesGathered;
 double totalEnergyConsumed;
 double networkLifetime;
@@ -172,6 +183,9 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 	NS_LOG_LOGIC(
 			std::endl<<TIME_STAMP_FUC <<sourceAdr <<" to "<<sinkAdr<<" by "
 			<<GetNodeIpv4Address(localNode));
+	if(isTest == true)
+		cout<<"TransmitDataPacket "<<sourceAdr <<" to "<<sinkAdr<<" by "
+			<<GetNodeIpv4Address(localNode)<<endl;
 	// NS_LOG_LOGIC(TIME_STAMP_FUC<<"CheckRemainingJ for "<<localAdr<<" passed!");
 	if (CheckRemainingJ(localNode)) {
 		// if(!updateDone){
@@ -194,7 +208,6 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 			if((uint32_t)curId != localId)
 				continue;
 			Edge* edge = graph.m_vVertex[i].next;
-			/*针对EXOR,修改发送策略*/
 			while(edge){
 				distance1 = GetdistanOf2Id(curId,(uint32_t)edge->id);
 				if(distance1 <= maxDis){
@@ -208,7 +221,10 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 				double PR=remaingJ[edge->id]/initialJ;
 				double MS = instSpeed[curId][edge->id];
 				double weight=fuzzy_calc(RR,DIS,PR,MS);
-				cout<<curId<<"的下一跳选择： "<< edge->id << "  此时linkstab为"<<weight<<endl;
+				if(isTest == true){
+				cout<<curId<<" -> "<< edge->id <<", 收包率： "<<RR<<"，DIS"<<DIS<<", 剩余能量"<<PR<<", MS: "<<MS<<"  此时linkstab为"<<weight<<endl;
+				}
+				
 				if(weight > maxWeight ){
 					maxWeight = weight;
 					gatewayId = (uint32_t)edge->id;
@@ -216,7 +232,10 @@ void TransmitDataPacket(Ptr<Node> localNode, Ipv4Address sourceAdr,
 				edge = edge->next;
 				//break;
 			}
-			cout<< "选择节点:" << gatewayId<<endl;
+			 if(isTest == true)
+				cout<<"下一跳节点选择:" <<gatewayId<<endl;
+		
+		
 			break;
 		}
 		if(gatewayId == 1024){
@@ -276,7 +295,7 @@ void DataToSink() {
 				//SendPacketsNum[thisNode->GetId()]-=1;
 				send++;
 				cout<<TIME_STAMP_FUC<<"data num is-->"<<send<<endl;
-				interval += 0.2;
+				interval += 0.1;
 			}		
 	}
 
@@ -326,7 +345,6 @@ void UpdateLinkStab(double interval){
 		Ptr<Node> n = *i;
 		// 拿到位置
 		Vector sourceLocation = n->GetObject<MobilityModel>()->GetPosition();
-		cout<<"Node"<<n->GetId()<<sourceLocation.x<<endl;
 		//迭代拿到节点的位置信息，节点间速度，接收率，节点剩余能量信息储存
 			for (NodeContainer::Iterator j = senseNodes.Begin();
 				j != senseNodes.End(); j++) {
@@ -357,7 +375,7 @@ void UpdateLinkStab(double interval){
 			double speed=(new_distance-old_distance)/interval;
 			//速度归一化
 			instSpeed[m->GetId()][n->GetId()]=((speed/20)/interval+0.99)/2;	
-			cout<<"速度"<<instSpeed[m->GetId()][n->GetId()]<<"  "<<interval<<endl;
+			// cout<<"速度"<<instSpeed[m->GetId()][n->GetId()]<<"  "<<interval<<endl;
 			double DIS=new_distance/225;
 			if(DIS > 1.0 )
 				DIS=1.0;
@@ -387,7 +405,8 @@ double fuzzy_calc(double RR, double DIS, double PR, double MS)
 	//int data_col_n = 4;
 	//int i, j = 0;
 	int i;
-	int debug = 1;
+	int debug = 0; 
+	// int debug = 1; 
 	double **dataMatrix;
 	string ss="/home/wsn/ns3/ns-allinone-3.26/ns-3.26/scratch/FRRP/LinkStab.fis";
 	const char *fis_file = ss.c_str();
@@ -447,6 +466,51 @@ double fuzzy_calc(double RR, double DIS, double PR, double MS)
 	remains.erase(find(remains.begin(),remains.end(),thisNode->GetId()));
 	return 0;
 }*/
+
+
+/*
+* TestPoint
+*/
+
+
+
+
+// 测试能量
+void testEnergy(){
+	cout<<"能量测试"<<endl;
+	for(uint32_t i = 0; i < nNodes; i++)
+		cout<<"节点"<<i<<"的剩余能量为： "<<remaingJ[i]<<endl;
+
+}
+
+// 测试ip
+void testIP(){
+	cout<<"senseNodes 的 ip地址如下"<<endl;
+	for (NodeContainer::Iterator i = senseNodes.Begin(); i != senseNodes.End();
+		i++) {
+			Ptr<Node> thisNode = *i;
+			Ipv4Address iv = GetNodeIpv4Address(thisNode);
+			cout<<thisNode->GetId()<<"---"<<iv<<endl;
+	}
+	
+	cout<<"接收器 的 ip地址如下"<<endl;
+	Ipv4Address iv1 = GetNodeIpv4Address(mobileSinkNode.Get(0));
+	cout<<mobileSinkNode.Get(0)->GetId()<<"---"<<iv1<<endl;
+
+}
+
+void testNeighbor(){
+	TestNodes();
+	testEnergy();
+	cout<<"链式表  ： 展示形式为  当前节点id->邻居节点id(weight)" <<endl;
+	graph.print();
+	graph.printRoute();
+}
+
+
+
+
+
 /*
  * 收到packet的回调函数
  */
@@ -510,15 +574,13 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 						}
 						break;
 					}
-					case neighbor_Type: {///收到data_Type的packet，将执行中继
-						/*EXOR更新邻居表方案*/
+					case neighbor_Type: {
 						uint32_t curId = thisNode->GetId();
 						//发送广播包的节点
 						Ipv4Address src = h.GetSource();
 						Ptr<Node>node = GetNodePtrFromIpv4Adr(src,senseNodes,mobileSinkNode);
 						Ptr<Node>msNode = mobileSinkNode.Get(0);
 						uint32_t id = node->GetId();
-						// cout<<"当前发送广播包的节点ip为："<<src<<"当前发送广播包的节点id为："<<id<<"接收到广播包的id为："<<curId<<endl;
 						Vector location1;
 						Vector location2;
 						if (isStatic){
@@ -527,16 +589,11 @@ void RecvPacketCallback(Ptr<Socket> socket) {
 						}else{
 							location1 = thisNode->GetObject<MobilityModel>()->GetPosition();
 							location2 = node->GetObject<MobilityModel>()->GetPosition();
-						}
-						//Ptr<Node>msNode = mobileSinkNode.Get(0);
-						//uint32_t id2 = msNode->GetId();
-						//double weight1 = etx[id][id2];
-						//double weight2 = etx[curId][id2];						
+						}				
 						Vector location = msNode->GetObject<MobilityModel>()->GetPosition();
 						double distance1 = GetdistanOf2Nodes(location1,location);//接收广播包到ms的距离
 						double distance2 = GetdistanOf2Nodes(location2,location);
 						if(distance1<distance2){// && (distance2-distance1>60)
-							// cout<<"插入邻居表,源节点为------->"<<id<<"目的节点为------>"<<curId<<endl;
 							graph.addNewEdgeToList(id,distance1,curId);
 						}
 					}
@@ -585,7 +642,7 @@ void createSimFolder(){
  * 不同文件log级别设置并使能log
  */
 void setLog(){
-	LogComponentEnable("pOLSRScript", LOG_LEVEL_DEBUG);
+	LogComponentEnable("FRRPScript", LOG_LEVEL_DEBUG);
 	LogComponentEnable("Energy", LOG_LEVEL_DEBUG);
 	LogComponentEnable("AdhocWifiMac", LOG_LEVEL_DEBUG);
 }
@@ -607,20 +664,7 @@ void netSet(){
  * 创建节点
  */
 void createNode(){
-	//Create nodes
-	// senseNodes.Create(nNodes);
-	// mobileSinkNode.Create(1);
-
-
-	senseNodes.Create(nNodes);
-	std::string traceFile;
-	if(moveSpeed.length()>0){
-		traceFile = "scratch/"+mobilityModel+"/test"+moveSpeed+".ns_movements";
-	}else{
-		traceFile = "scratch/"+mobilityModel+"/speed20.ns_movements";
-	}
-	Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-	ns2.Install ();
+	senseNodes.Create(nNodes);	
 	mobileSinkNode.Create(1);
 	NS_LOG_DEBUG("Create nodes done!");
 }
@@ -628,53 +672,30 @@ void createNode(){
  * 创建移动模型并安装到节点
  */
 void createMobilityModel(){
-	//test grid position allocator
-	maxX = 20;
-	maxY = 10*(std::ceil(nNodes*1.0/5));
-	maxY=30;
-	mSinkTraceY = maxY;
-	// maxDis = 15;
-	//Install mobility
-	MobilityHelper mobility;
-	mobility.SetPositionAllocator("ns3::GridPositionAllocator", 
-		"GridWidth",UintegerValue(5), 
-		"MinX", DoubleValue(0.0), 
-		"MinY", DoubleValue(0.0), 
-		"DeltaX", DoubleValue(150.0), 
-		"DeltaY",DoubleValue(150.0));
-	if (isStatic) {
-		mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	}else {
-		ObjectFactory pos1;
-		pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-		// pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=600.0]"));
-		// pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=450.0]"));
-		pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=600.0]"));
-		pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=450.0]"));
-		Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
+	stringstream input;
+	input<<"ns3::UniformRandomVariable[Min="<<inputSpeed-2<<"|Max="<<inputSpeed+2<<"]";
+	MobilityHelper mobility;  
+	Ptr<RandomBoxPositionAllocator>RBOXPA=CreateObject<RandomBoxPositionAllocator>();
+	RBOXPA->SetAttribute("X", StringValue ("ns3::UniformRandomVariable[Min=0|Max=1000]"));
+	RBOXPA->SetAttribute("Y", StringValue ("ns3::UniformRandomVariable[Min=0|Max=1000]"));
+	RBOXPA->SetAttribute("Z", StringValue ("ns3::UniformRandomVariable[Min=0|Max=300]"));
+	mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
+		"Speed",  StringValue (input.str()),
+		//"Speed",  StringValue ("ns3::UniformRandomVariable[Min=33|Max=37]"),//速度设置
+		"Pause", StringValue ("ns3::UniformRandomVariable[Min=0.3|Max=2]"),
+		"PositionAllocator", PointerValue (RBOXPA));
+    
+	mobility.SetPositionAllocator("ns3::RandomBoxPositionAllocator", "X", StringValue ("ns3::UniformRandomVariable[Min=0|Max=1000]"),
+																"Y", StringValue ("ns3::UniformRandomVariable[Min=0|Max=1000]"),
+																"Z", StringValue ("ns3::UniformRandomVariable[Min=0|Max=300]"));
 
-		mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-										"Speed", StringValue ("ns3::ConstantRandomVariable[Constant=6.0]"),
-										"Pause", StringValue ("ns3::ConstantRandomVariable[Constant=20.0]"),
-										"PositionAllocator", PointerValue (taPositionAlloc1)
-										);
-	}
-	// mobility.Install(senseNodes);
-
-	mobility.Install(mobileSinkNode);
-	mobileSinkNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(500, 500, 0));
-	//接收器安装移动模型
-	// Ptr<ListPositionAllocator> lpa = CreateObject<ListPositionAllocator>();
-	// lpa->Add(Vector(300, 600, 0));
-	// // lpa->Add(Vector(100, 300, 0));
-	// // lpa->Add(Vector(150, 450, 0));
-	// // lpa->Add(Vector(150, 450, 0));
-	// mobility.SetPositionAllocator(lpa);
-
-	// mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-	// mobility.Install(mobileSinkNode);
-
-	NS_LOG_DEBUG("Install mobility done!");
+	//mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(senseNodes); 
+	mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+	mobility.Install(mobileSinkNode);	
+	Ptr<MobilityModel> mm= mobileSinkNode.Get(0)->GetObject<MobilityModel>();
+	Vector BSposition{500,500,150};
+	mm->SetPosition(BSposition);
 }
 /*
  * 创建wifi通信设备
@@ -718,12 +739,12 @@ void createWifiDevice(){
 	NS_LOG_DEBUG("Set pcap and anmi done!");
 }
 /*
- * 安装网络协议栈，比如AODV等协议，需要安装到该处。
+ * 安装网络协议栈。
  */
 void installInternetStack(){
 	InternetStackHelper stack2;
 	stack2.Install (mobileSinkNode);
-	stack2.Install (senseNodes);//注意，AODV协议安装到nodes节点上
+	stack2.Install (senseNodes);
 
 	Ipv4AddressHelper ipv4;
 	ipv4.SetBase("10.1.1.0", "255.255.255.0");
@@ -754,15 +775,15 @@ void createXml(){
 	if (Banim) {
 		if(isSpeed){
 			if(isLifeCycle){
-				Panim = new AnimationInterface("/home/wsn/sim_temp/pOLSR/"+mobilityModel+"/SPEED/LIFE/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FRRP/"+mobilityModel+"/SPEED/LIFE/output.xml");
 			}else{
-				Panim = new AnimationInterface("/home/wsn/sim_temp/pOLSR/"+mobilityModel+"/SPEED/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FRRP/"+mobilityModel+"/SPEED/output.xml");
 			}
 		}else{
 			if(isLifeCycle){
-				Panim = new AnimationInterface("/home/wsn/sim_temp/pOLSR/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FRRP/"+mobilityModel+"/PACKAGE/LIFE/output.xml");
 			}else{
-				Panim = new AnimationInterface("/home/wsn/sim_temp/pOLSR/"+mobilityModel+"/PACKAGE/output.xml");
+				Panim = new AnimationInterface("/home/wsn/sim_temp/FRRP/"+mobilityModel+"/PACKAGE/output.xml");
 			}
 		}
 		// Panim = new AnimationInterface("/home/zlb/sim_temp/EXOR/"+mobilityModel+"/output.xml");
@@ -791,22 +812,10 @@ void finalRecord(){
 
 	std::cout<<"\n\n***** OUTPUT *****\n\n";
 	std::stringstream ss;
-	if(isLifeCycle){
-		if(isSpeed){
-			ss << "/home/wsn/sim_temp/pOLSR/"<<mobilityModel<<"/SPEED/LIFE/"<<moveSpeed<<".record";
-		}else{
-			ss << "/home/wsn/sim_temp/pOLSR/"<<mobilityModel<<"/PACKAGE/"<<"LIFE"<<"/"<<initialJ<<"-"+mobilityModel+".record";
-		}
-	}else{
-		if(isSpeed){
-			ss << "/home/wsn/sim_temp/pOLSR/"<<mobilityModel<<"/SPEED/"<<moveSpeed<<"-"+mobilityModel+".record";
-		}else{
-			ss << "/home/wsn/sim_temp/pOLSR/"<<mobilityModel<<"/PACKAGE/"<<maxPackets<<"-"+mobilityModel+".record";
-		}
-	}
+	ss << "/home/wsn/sim_temp/FRRP/"<<mobilityModel<<"/"<<moveSpeed<<"-"<<maxDis<<"-"<<maxPackets<<".record";	
 	
 	std::ofstream of(ss.str().c_str());
-	simFinishRealTime = clock();
+	simFinishRealTime = Simulator::Now().GetSeconds();
 	cout<<"使用的移动模型:"<<mobilityModel<<endl;
 	ss << std::endl << "使用的移动模型:" << mobilityModel<< std::endl;	
 
@@ -819,9 +828,9 @@ void finalRecord(){
 	}else{
 		std::cout << "网络时延: " << netDelay<< "\n";
 		std::cout<<"PDR指标:"<<totalBytesGathered/totalBytesGenerated*100<<"%"<<endl;
-		std::cout<<"网络吞吐量:"<<totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
+		std::cout<<"网络吞吐量:"<<totalBytesGathered*8.0/((simFinishRealTime-simStartRealTime)*1000.0)<<"(kbps)"<<endl;
 		ss << std::endl << "网络时延:" << netDelay<<"(ms)"<< std::endl;
-		ss << std::endl << "网络吞吐量: " << totalBytesGathered*1.0/((simFinishRealTime-simStartRealTime)/1000)<<"(Byte/s)"<<endl;
+		ss << std::endl << "网络吞吐量: " << totalBytesGathered*8.0/((simFinishRealTime-simStartRealTime)*1000.0)<<"(kbps)"<<endl;
 		ss << std::endl << "PDR指标:" <<totalBytesGathered/totalBytesGenerated*100<<"%"<<endl;
 	}
 
@@ -958,8 +967,9 @@ void update(){
 	// cout<<"update()"<<endl;
 	updateDone = false;
 	updateNeighbor();
-	// Simulator::Schedule(Seconds(buildNeighborDone), &testPrintNeighbor);
 	Simulator::Schedule(Seconds(buildNeighborDone), &setUpdateDoneFlag,true);
+	if(isTest == true)
+		Simulator::Schedule(Seconds(buildNeighborDone + 0.1), &testNeighbor);
 	Simulator::Schedule(Seconds(updateInterval), &update);
 }
 
@@ -970,7 +980,7 @@ void testPrintNeighbor(){
 }
 
 void setSimStartTime(){
-	simStartRealTime = clock();
+	simStartRealTime = Simulator::Now().GetSeconds();
 }
 
 /*当前节点距离接收器的距离*/
@@ -1004,7 +1014,9 @@ int main(int argc, char* argv[]) {
 	cmd.AddValue("moveSpeed","move Speed", moveSpeed);
 	cmd.AddValue("mobilityModel","use mobilityModel", mobilityModel);
 	cmd.AddValue("isLifeCycle","is test lifeCycle", isLifeCycle);
+	cmd.AddValue("isTest", "open Test Point or not", isTest);
 	cmd.AddValue("totalTime", "Simulation time length", totalTime);
+	cmd.AddValue("simStartTime", "Simulation start time", simStartTime);
 	cmd.AddValue("simStartTime", "Simulation start time", simStartTime);
 	cmd.AddValue("maxDis", "max distance to transmit", maxDis);
 	cmd.AddValue("maxPackets", "max distance to transmit", maxPackets);
@@ -1018,6 +1030,7 @@ int main(int argc, char* argv[]) {
 	cmd.AddValue("TxPara","The parameter of Tx",TxPara);
 	cmd.AddValue("RxPara","The parameter of Rx",RxPara);
 	cmd.AddValue("Brotate","Whether to enable gateway rotation ",Brotate);
+	cmd.AddValue("inputSpeed","input speed",inputSpeed);
 	cmd.AddValue("Bdrain","Whether to enable drain notice broadcast ",Bdrain);
 	cmd.AddValue("isStatic","Whether install static mobilitymodel ",isStatic);
 	cmd.AddValue("Tgather","The percentage of threshold of data gathering percentage,(0,1) ",Tgather);
@@ -1074,6 +1087,7 @@ int main(int argc, char* argv[]) {
 	//测试周期性邻居交换信息
 	Simulator::Schedule(Seconds(0.1),&update); 
 		//UpdateInstSpeed(5.0);
+	//	TestNodes();
 	Simulator::Schedule(Seconds(buildNeighborDone),&DataToSink);
 	//Simulator::Schedule(Seconds(6.0),&testPrintNeighbor); 
 	//测试结束
@@ -1087,16 +1101,15 @@ int main(int argc, char* argv[]) {
 	uint32_t num;    
 	flowMonitor->CheckForLostPackets ();   
 	FlowMonitor::FlowStatsContainer stats = flowMonitor->GetFlowStats ();    
-	for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i) {    num++;                        
+	for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i) {                          
 		delay=delay+i->second.delaySum;    
 		num++;
 	}
 	cout<<"网络时延:"<<delay/num<<endl;//单跳的平均时延
 	netDelay = delay/num;
-
-	Simulator::Destroy();
 	//step 17:数据收集
 	finalRecord();
+	Simulator::Destroy();
 	return 0;
 }
 

@@ -9,11 +9,18 @@ struct Edge{
 	double weight;
 	struct Edge* next;
 };
+
+struct Node1{
+	int id;
+	int weight;
+	struct Node1* next;
+};
  
-// ����(����ͷ)
+// 
 struct Vertex{
 	int id;
-	struct Edge* next;
+	struct Edge* next; // next我的邻居
+	struct Node1* nodeNext; // 我的下一跳节点
 };
  
 // ����ͼ
@@ -33,23 +40,18 @@ public:
 	void addNewEdgeToList(int vFrom, double weight, int vTo);
 	bool isExist(int vFrom, int vTo);
 	void printNoteNeighbor(uint32_t id);
+	void printRoute();
+	void createRoute();
  
 private:
-	// 1. ���붨����
-
-	// 2. ���ɶ�������
-
-	// 3. �������
 	void inputEdgeCount();
-	// 4. ����ߵ���ʼ��
 	void inputEdgeInfo();
-	// 5. ��ӱ߽ڵ�����Ӧ��������
 	
 
 public:
 	int m_vCount;
 	int m_eCount;
-	int adjcent_Matrix[11][11]={};
+	int adjcent_Matrix[22][22]={};
 	Vertex* m_vVertex;
 };
 
@@ -149,6 +151,7 @@ void GraphList::makeVertexArray()
 	for (int i = 0; i < m_vCount; ++i){
 		m_vVertex[i].id = i;
 		m_vVertex[i].next = NULL;
+		m_vVertex[i].nodeNext = NULL;
 	}
 }
  
@@ -205,15 +208,15 @@ void GraphList::addEdgeToList(int vFrom, double weight, int vTo)
 void GraphList::updateArray()
 {
 	//更新,先清空,然后重新push
-	for(int i=0;i<11;i++){
-		for(int j=0;j<11;j++){
+	for(int i=0;i<22;i++){
+		for(int j=0;j<22;j++){
 			adjcent_Matrix[i][j]=0;
 		}
 	}
-	// ��ʼ��
+	// 
 	for (int i = 0; i < m_vCount; ++i){
 		int curId = m_vVertex[i].id;
-		Edge* edge = m_vVertex[i].next;
+		Node1* edge = m_vVertex[i].nodeNext;
 		while(edge){
 			int id = edge->id;
 			//cout<<"id:"<<id<<endl;
@@ -221,13 +224,13 @@ void GraphList::updateArray()
 			edge = edge->next;
 		}
 	}
-	cout<<"updateArray====================="<<endl;
-	for(int i=0;i<11;i++){
-		for(int j=0;j<11;j++){
-			cout<<adjcent_Matrix[i][j]<<" ";
-		}
-		cout<<endl;
-	}
+	// cout<<"updateArray====================="<<endl;
+	// for(int i=0;i<22;i++){
+	// 	for(int j=0;j<22;j++){
+	// 		cout<<adjcent_Matrix[i][j]<<" ";
+	// 	}
+	// 	cout<<endl;
+	// }
 }
  
 void GraphList::printGraph()
@@ -244,22 +247,22 @@ void GraphList::printGraph()
 	}
 }
 
-// vector<uint32_t> GraphList::printGraph(uint32_t _id)
-// {
-// 	vector<uint32_t>res;
-// 	for (int i = 0; i < m_vCount; ++i){
-// 		if(_id != m_vVertex[i].id){
-// 			continue;
-// 		}else{
-// 			Edge* tmp = m_vVertex[i].next;
-// 			while(tmp){		
-// 				res.push_back(tmp->id);
-// 				tmp = tmp->next;
-// 			}
-// 		}
-// 	}
-// 	return res;
-// }
+void GraphList::printRoute()
+{
+	cout<<"printRoute()--->"<<endl;
+	for (int i = 0; i < m_vCount; ++i){
+		Node1* tmp = m_vVertex[i].nodeNext;
+		cout << "list:" << m_vVertex[i].id << "->";
+		while(tmp){
+			// cout << "(" << tmp->weight << ")";
+			cout << tmp->id << "->";
+			tmp = tmp->next;
+		}
+		cout << "NULL" << endl;
+	}
+}
+
+
 
 
 void GraphList::print(){
@@ -269,7 +272,7 @@ void GraphList::print(){
 		int curId = m_vVertex[i].id;
 		cout << curId << "->";
 		while(tmp){
-			cout << tmp->id << "->";
+			cout << tmp->id << "(" << tmp->weight<< ") ->";
 			tmp = tmp->next;
 		}
 		cout<<endl;
@@ -296,10 +299,59 @@ void GraphList::addNewEdgeToList(int vFrom, double weight, int vTo)
 
 }
 
+void GraphList::createRoute()
+{
+	cout<<"createRoute"<<endl;
+	for (int i = 0; i < m_vCount; ++i){
+		Node1* edge = m_vVertex[i].nodeNext;
+		if(edge != NULL){
+			edge->next = NULL;
+			edge = NULL;
+		}
+
+	}
+	for (int i = 0; i < m_vCount; ++i){
+		int curId = m_vVertex[i].id;
+		Edge* edge = m_vVertex[i].next;
+		int minWeight=1024;
+		int idTmp = -1;
+		while(edge){
+			int id = edge->id;
+			int weight = edge->weight;
+			if(weight<minWeight){
+				minWeight = weight;
+				idTmp = id;
+			}
+			edge = edge->next;	
+		}
+		// 如果有下一跳节点
+		if(minWeight!=1024 && idTmp!=-1){
+			Node1* node = new Node1();
+			node->id = idTmp;
+			node->weight = minWeight;
+			node->next = NULL;
+		    //cout<<"添加节点的id： "<<idTmp<<"  weight:"<<minWeight<<endl;
+			// 如果当前节点的nodeNext已经存在
+	/*		if (m_vVertex[curId].nodeNext){
+				Node1* tmp = m_vVertex[curId].nodeNext;
+				while(tmp->next){
+					tmp = tmp->next;
+				}
+				tmp->next = node;
+			}else{
+				m_vVertex[curId].nodeNext = node;
+			}		 */	
+			
+			m_vVertex[curId].nodeNext = node;
+		}
+	}
+
+}
+
 
 bool GraphList::isExist(int vFrom, int vTo){
 	bool res = false;
-	if (m_vVertex[vFrom].next){//˵�������ھӽڵ� 
+	if (m_vVertex[vFrom].next){// 
 		Edge* tmp = m_vVertex[vFrom].next;
 		while(tmp){
 			if(tmp->id == vTo){
